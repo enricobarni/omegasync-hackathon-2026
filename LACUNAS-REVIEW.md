@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-19 — após a ETAPA 12.
+Última atualização: 2026-09-19 — após a ETAPA 13.
 
 ---
 
@@ -41,6 +41,7 @@ explícitas.
 | L20 | Cliente HTTP real do Logcomex (endpoint + credenciais) | 11 | Só a porta `DocumentAnalysisPort` + adapter puro + fallback; sem chamada de rede no núcleo, sem segredos versionados | ABERTA | Endpoint/credenciais via variável de ambiente (borda) |
 | L21 | Parsing de números em locale (ex.: "1.234,56") do Logcomex | 11 | `parseNumber` não adivinha locale: string não numérica → desconhecido | ABERTA | Confirmar formato real do provedor |
 | L22 | Painel de evidências detalhado (fonte/confiança/vigência) na UI | 12 | A resposta da API expõe motivos/faltantes/tendências, mas não o array de evidências completo (DESIGN §19) | ABERTA | Estender `SimulationResponseDTO` com evidências (ETAPA 16) |
+| L23 | Resposta real do tracking (schema estruturado além de texto) | 13 | Tratado só como contexto de texto; sem derivar fato determinístico (FONTES §26) | ABERTA | Confirmar payload real do provedor |
 | L13 | Mínimos de armazenagem (DP World/Ecoporto) | 4 | Não documentados → `minimumValue: null` (não zero) | ABERTA | Tabelas dos terminais |
 | L14 | Fração de carga anuente em Santos; canal pós-DUIMP específico de Santos | — | Não usados como probabilidade individual | ABERTA | Estatística oficial (FONTES §24) |
 | L15 | SSE — situação não pacificada | 5 | `sseAtivo = false` por padrão; OFF → componente NOT_APPLICABLE | EM USO COMO PREMISSA | STJ/TCU/Cade (FONTES §20) |
@@ -192,6 +193,14 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   subtotal 0 incompleto → "Sem custo conhecido"; nunca R$ 0,00 (DESIGN §18).
   Estados VIÁVEL/INVIÁVEL/INDETERMINADA usam ícone + texto + badge (não só cor).
 
+### ETAPA 13 — Tracking Logcomex
+- **R39 — Tracking é contexto, não decisão:** `adaptTracking` converte a resposta
+  em texto rastreável (`TrackingContext`, `contextOnly: true`) com proveniência
+  LOGCOMEX; nunca deriva fato determinístico de texto livre (FONTES §26) e não
+  alimenta o motor de decisão.
+- **R40 — DTO do provedor fora do domínio + fallback:** schema de tracking em
+  `src/lib/logcomex`; fallback offline mantém tudo desconhecido (ver L23).
+
 ---
 
 ## 3. Histórico de atualizações
@@ -210,3 +219,5 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   locale do Logcomex) e pontos de review R30–R33 (análise documental).
 - **2026-09-19 — ETAPA 12:** adicionada L22 (painel de evidências na UI) e
   pontos de review R34–R38 (frontend do diagnóstico).
+- **2026-09-19 — ETAPA 13:** adicionada L23 (schema real do tracking) e pontos
+  de review R39–R40 (tracking como contexto).
