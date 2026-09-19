@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-19 — após a ETAPA 9.
+Última atualização: 2026-09-19 — após a ETAPA 10.
 
 ---
 
@@ -147,6 +147,20 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   ETAPAs 10/11. O mapeamento rota→tarifa também é responsabilidade do chamador
   (ver L19), para não inventar tarifa/distância por rota.
 
+### ETAPA 10 — API de simulação
+- **R26 — Handler fino + DTOs separados:** `POST /api/simulations` só valida,
+  normaliza, chama `runSimulation` e retorna HTTP; DTOs públicos em `src/lib/api`
+  separados do domínio. Nenhuma regra duplicada.
+- **R27 — Validação de NCM na borda:** NCM exigido como 8 dígitos numéricos
+  (formato oficial), enums e CIF validados; erros → HTTP 400 com lista. CIF
+  ausente → desconhecido (não zero).
+- **R28 — Rotas e custo na API:** o handler usa `BASELINE_CATALOG.routes` e não
+  recebe custo do cliente nesta etapa → custo por rota fica UNKNOWN (ver L19).
+  Enriquecimento tarifário/Logcomex e envio de premissas via API são evolução
+  posterior (ETAPA 11+).
+- **R29 — Config de teste:** adicionado `vitest.config.mts` resolvendo o alias
+  `@` para `src`, permitindo testar o Route Handler. Sem impacto em runtime.
+
 ---
 
 ## 3. Histórico de atualizações
@@ -159,3 +173,5 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   tratamento administrativo); pontos de review R19–R22 (anuência/liberação).
 - **2026-09-19 — ETAPA 9:** adicionada L19 (mapeamento rota→tarifa) e pontos de
   review R23–R25 (serviço de simulação/orquestração).
+- **2026-09-19 — ETAPA 10:** pontos de review R26–R29 (API de simulação, DTOs,
+  validação de borda e config de teste).
