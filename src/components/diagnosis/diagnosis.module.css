@@ -1,0 +1,269 @@
+/* Diagnóstico: formulário + resultado (DESIGN.md §13–§19). */
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+.resultColumn {
+  border-left: 1px solid var(--border);
+  padding-left: 32px;
+}
+
+@media (max-width: 1250px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .resultColumn {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding-left: 0;
+    padding-top: 28px;
+  }
+}
+
+/* Formulário */
+.section {
+  margin-bottom: 26px;
+}
+
+.sectionTitle {
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 600px) {
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.input,
+.select {
+  min-height: 43px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 14px;
+  width: 100%;
+}
+
+.actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.primaryButton {
+  background: var(--btn);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  min-height: 42px;
+  padding: 0 20px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.primaryButton:hover {
+  background: var(--btn-hover);
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Resultado */
+.placeholder {
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+}
+
+.errorBox {
+  border: 1px solid var(--blocked);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  color: var(--blocked);
+  background: #f7ecea;
+}
+
+.errorBox ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.resultBlock {
+  margin-bottom: 24px;
+}
+
+.resultBlock h2 {
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.conclusion {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  background: var(--surface);
+}
+
+.reasons {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius);
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+}
+
+.badgeOk {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+.badgeBlocked {
+  color: var(--blocked);
+  border-color: var(--blocked);
+}
+.badgePending {
+  color: var(--pending);
+  border-color: var(--pending);
+}
+
+.routeCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  background: var(--surface);
+}
+
+.routeHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.routeLabel {
+  font-weight: 500;
+}
+
+.routeSummary {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.costRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+}
+
+.costLabel {
+  color: var(--muted);
+}
+
+.list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.metrics {
+  display: flex;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.metric {
+  flex: 1 1 120px;
+  padding: 12px 14px;
+  border-right: 1px solid var(--border);
+}
+
+.metric:last-child {
+  border-right: none;
+}
+
+.metricValue {
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.metricLabel {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.factor {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.factorTendency {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.disclosure summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+}

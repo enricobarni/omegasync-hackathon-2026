@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-19 — após a ETAPA 11.
+Última atualização: 2026-09-19 — após a ETAPA 12.
 
 ---
 
@@ -40,6 +40,7 @@ explícitas.
 | L19 | Mapeamento rota → tarifa/distância/prazo na simulação | 9 | O serviço recebe `routeCostComponents` do chamador; sem custo informado → componente UNKNOWN (total null, nunca zero) | ABERTA | Catálogo real + tarifas (ETAPAs 2/4) |
 | L20 | Cliente HTTP real do Logcomex (endpoint + credenciais) | 11 | Só a porta `DocumentAnalysisPort` + adapter puro + fallback; sem chamada de rede no núcleo, sem segredos versionados | ABERTA | Endpoint/credenciais via variável de ambiente (borda) |
 | L21 | Parsing de números em locale (ex.: "1.234,56") do Logcomex | 11 | `parseNumber` não adivinha locale: string não numérica → desconhecido | ABERTA | Confirmar formato real do provedor |
+| L22 | Painel de evidências detalhado (fonte/confiança/vigência) na UI | 12 | A resposta da API expõe motivos/faltantes/tendências, mas não o array de evidências completo (DESIGN §19) | ABERTA | Estender `SimulationResponseDTO` com evidências (ETAPA 16) |
 | L13 | Mínimos de armazenagem (DP World/Ecoporto) | 4 | Não documentados → `minimumValue: null` (não zero) | ABERTA | Tabelas dos terminais |
 | L14 | Fração de carga anuente em Santos; canal pós-DUIMP específico de Santos | — | Não usados como probabilidade individual | ABERTA | Estatística oficial (FONTES §24) |
 | L15 | SSE — situação não pacificada | 5 | `sseAtivo = false` por padrão; OFF → componente NOT_APPLICABLE | EM USO COMO PREMISSA | STJ/TCU/Cade (FONTES §20) |
@@ -176,6 +177,21 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
 - **R33 — CIF derivado:** `deriveCif` = FOB+frete+seguro (Incoterms) só quando os
   três são conhecidos; caso contrário desconhecido. Definição, não invenção.
 
+### ETAPA 12 — Frontend do diagnóstico
+- **R34 — UI só consome a API:** o React não replica regra; o formulário chama
+  `POST /api/simulations` e renderiza o DTO. Nenhuma decisão no cliente.
+- **R35 — Dependência lucide-react:** adicionada para ícones lineares (DESIGN
+  §31, strokeWidth ~1.5). Necessidade concreta do guia visual.
+- **R36 — Home = diagnóstico:** por prioridade do DESIGN §33, foi implementado o
+  shell + diagnóstico. Module selector, storytelling e 3D ficam adiados; nav
+  "Rotas"/"Carteira" aparecem como placeholders "Em breve".
+- **R37 — Teste de UI via helpers puros:** cobertura por `format.ts` (puro) +
+  `tsc`/`build`; não adicionei jsdom/RTL (UI presentacional, sem regra) — pode
+  ser incluído se quiser testes de componente.
+- **R38 — Valores desconhecidos na UI:** total `null` → "Indeterminado",
+  subtotal 0 incompleto → "Sem custo conhecido"; nunca R$ 0,00 (DESIGN §18).
+  Estados VIÁVEL/INVIÁVEL/INDETERMINADA usam ícone + texto + badge (não só cor).
+
 ---
 
 ## 3. Histórico de atualizações
@@ -192,3 +208,5 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   validação de borda e config de teste).
 - **2026-09-19 — ETAPA 11:** adicionadas L20–L21 (cliente HTTP e parsing de
   locale do Logcomex) e pontos de review R30–R33 (análise documental).
+- **2026-09-19 — ETAPA 12:** adicionada L22 (painel de evidências na UI) e
+  pontos de review R34–R38 (frontend do diagnóstico).
