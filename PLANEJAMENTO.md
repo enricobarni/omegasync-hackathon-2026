@@ -134,7 +134,7 @@ contexto-completo-omegasync.md
 ideia_operacao_portuaria_zona_primaria_secundaria.pdf
 ```
 
-O arquivo `FONTES-CODIGO-OMEGASYNC.md` deste novo projeto é a referência central de dados e fontes.
+O arquivo `FONTES.md` deste novo projeto é a referência central de dados e fontes.
 
 ---
 
@@ -296,7 +296,7 @@ como conceitos separados.
 
 # 5. Dados econômicos do repo anterior que devem ser reaproveitados como baseline
 
-O agente deve consultar `FONTES-CODIGO-OMEGASYNC.md` antes de usar qualquer número.
+O agente deve consultar `FONTES.md` antes de usar qualquer número.
 
 Baseline usado anteriormente:
 
@@ -535,7 +535,7 @@ feat/tariff-data
 ### O agente deve
 
 1. consultar os datasets do repo anterior;
-2. consultar `FONTES-CODIGO-OMEGASYNC.md`;
+2. consultar `FONTES.md`;
 3. recriar dataset versionado;
 4. preservar proveniência;
 5. registrar vigência/captura;
@@ -1032,7 +1032,7 @@ Antes de push:
 ```text
 [ ] escopo da branch cumprido
 [ ] repo anterior consultado quando relevante
-[ ] FONTES-CODIGO-OMEGASYNC.md consultado quando há regra/dado externo
+[ ] FONTES.md consultado quando há regra/dado externo
 [ ] nenhum dado inventado
 [ ] nenhum segredo versionado
 [ ] testes relevantes passando
