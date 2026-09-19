@@ -43,12 +43,18 @@ export interface CostComponent {
 export interface CostSummary {
   /** Soma dos componentes conhecidos. NOT_APPLICABLE contribui com 0. */
   knownSubtotal: number;
-  /** Total apenas quando não há componente desconhecido; caso contrário null. */
+  /** Total apenas quando há componentes e nenhum é desconhecido; senão null. */
   total: number | null;
-  /** Verdadeiro quando nenhum componente necessário está desconhecido. */
+  /**
+   * Verdadeiro só quando há ao menos um componente e nenhum desconhecido.
+   * Conjunto vazio NÃO é "completo" (AJUSTE 1.2): ausência de custos não é
+   * o mesmo que custo total conhecido igual a zero.
+   */
   complete: boolean;
   /** Indica se há ao menos um componente desconhecido. */
   hasUnknown: boolean;
+  /** Indica se há ao menos um componente informado. */
+  hasComponents: boolean;
 }
 
 function roundCents(value: number): number {
@@ -68,9 +74,8 @@ export function createCostComponent(
  * Resume um conjunto de componentes de custo aplicando a regra estrutural
  * de custos incompletos.
  *
- * Um conjunto vazio produz subtotal 0 e total 0 (não há desconhecidos entre
- * os componentes fornecidos); a completude reflete apenas os componentes
- * efetivamente informados.
+ * Um conjunto VAZIO não é tratado como custo total zero (AJUSTE 1.2):
+ * produz `total: null`, `complete: false`, `hasComponents: false`.
  */
 export function summarizeCosts(components: CostComponent[]): CostSummary {
   let knownSubtotal = 0;
@@ -87,11 +92,14 @@ export function summarizeCosts(components: CostComponent[]): CostSummary {
   }
 
   knownSubtotal = roundCents(knownSubtotal);
+  const hasComponents = components.length > 0;
+  const complete = hasComponents && !hasUnknown;
 
   return {
     knownSubtotal,
-    total: hasUnknown ? null : knownSubtotal,
-    complete: !hasUnknown,
+    total: complete ? knownSubtotal : null,
+    complete,
     hasUnknown,
+    hasComponents,
   };
 }

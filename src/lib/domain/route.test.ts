@@ -9,7 +9,7 @@ import type { Facility } from "./customs";
 import { known, unknown } from "./information";
 import { knownAmount, unknownAmount } from "./money";
 import { createEvidence } from "./provenance";
-import { acceptsCargoType, assessRouteCost } from "./route";
+import { assessRouteCost, cargoTypeAcceptance } from "./route";
 import type { Route } from "./route";
 
 const EVIDENCIA = createEvidence("USUARIO");
@@ -35,7 +35,7 @@ function criarRota(overrides: Partial<Route> = {}): Route {
     origin: TERMINAL,
     destination: RETROPORTO,
     requiresDta: dtaRequirementUnknown(),
-    acceptedCargoTypes: ["FCL"],
+    acceptedCargoTypes: known(["FCL"], EVIDENCIA),
     availability: availabilityUnknown(),
     distanceKm: known(17, EVIDENCIA),
     estimatedDurationHours: unknown(),
@@ -46,14 +46,19 @@ function criarRota(overrides: Partial<Route> = {}): Route {
 }
 
 describe("rota", () => {
-  it("não assume aceitação de tipo de carga não listado", () => {
-    const rota = criarRota({ acceptedCargoTypes: ["FCL"] });
+  it("distingue aceito, rejeitado e desconhecido (unknown != rejeitado)", () => {
+    const rota = criarRota({ acceptedCargoTypes: known(["FCL"], EVIDENCIA) });
 
-    expect(acceptsCargoType(rota, "FCL")).toBe(true);
-    expect(acceptsCargoType(rota, "LCL")).toBe(false);
+    expect(cargoTypeAcceptance(rota, "FCL")).toBe("ACCEPTED");
+    expect(cargoTypeAcceptance(rota, "LCL")).toBe("REJECTED");
 
-    const semTiposConfirmados = criarRota({ acceptedCargoTypes: [] });
-    expect(acceptsCargoType(semTiposConfirmados, "FCL")).toBe(false);
+    // KNOWN [] = confirmado que nenhum tipo é aceito => REJECTED
+    const semTipos = criarRota({ acceptedCargoTypes: known([], EVIDENCIA) });
+    expect(cargoTypeAcceptance(semTipos, "FCL")).toBe("REJECTED");
+
+    // UNKNOWN = ainda não se sabe => nunca vira rejeitado
+    const desconhecido = criarRota({ acceptedCargoTypes: unknown() });
+    expect(cargoTypeAcceptance(desconhecido, "FCL")).toBe("UNKNOWN");
   });
 
   it("mantém disponibilidade e DTA como desconhecidos por padrão", () => {

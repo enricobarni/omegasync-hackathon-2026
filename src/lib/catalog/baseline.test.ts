@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  BASELINE_CATALOG,
+  DEMO_CATALOG,
+  OPERATIONAL_CATALOG,
   ROTA_MODELO_PRIMARIA_SECUNDARIA,
 } from "./baseline";
 import {
@@ -9,29 +10,41 @@ import {
   routeCrossesZones,
   validateCatalog,
 } from "./catalog";
+import { isKnown } from "../domain";
 
-describe("catálogo baseline", () => {
+describe("catálogo operacional (AJUSTE 2.3)", () => {
+  it("contém só recintos reais e nenhuma rota fabricada", () => {
+    const validation = validateCatalog(
+      OPERATIONAL_CATALOG.facilities,
+      OPERATIONAL_CATALOG.routes,
+    );
+    expect(validation.valid).toBe(true);
+    expect(OPERATIONAL_CATALOG.routes).toEqual([]);
+    expect(OPERATIONAL_CATALOG.facilities.map((f) => f.id)).not.toContain(
+      "recinto-zs-generico",
+    );
+  });
+});
+
+describe("catálogo de demonstração", () => {
   it("tem integridade referencial", () => {
     const validation = validateCatalog(
-      BASELINE_CATALOG.facilities,
-      BASELINE_CATALOG.routes,
+      DEMO_CATALOG.facilities,
+      DEMO_CATALOG.routes,
     );
     expect(validation.valid).toBe(true);
   });
 
   it("todo recinto carrega proveniência", () => {
-    for (const facility of BASELINE_CATALOG.facilities) {
+    for (const facility of DEMO_CATALOG.facilities) {
       expect(facility.source).toBeDefined();
       expect(facility.source?.id).toBeTruthy();
     }
   });
 
-  it("separa recintos por zona", () => {
-    const primaria = listFacilitiesByZone(BASELINE_CATALOG, "ZONA_PRIMARIA");
-    const secundaria = listFacilitiesByZone(
-      BASELINE_CATALOG,
-      "ZONA_SECUNDARIA",
-    );
+  it("separa recintos por zona e inclui o sintético de simulação", () => {
+    const primaria = listFacilitiesByZone(DEMO_CATALOG, "ZONA_PRIMARIA");
+    const secundaria = listFacilitiesByZone(DEMO_CATALOG, "ZONA_SECUNDARIA");
 
     expect(primaria.map((f) => f.id)).toContain("dpworld-santos");
     expect(primaria.map((f) => f.id)).toContain("btp-santos");
@@ -52,11 +65,11 @@ describe("rota-modelo Zona Primária → Zona Secundária", () => {
     }
   });
 
-  it("não inventa disponibilidade, distância, prazo nem custos", () => {
+  it("não inventa disponibilidade, distância, prazo, tipos de carga nem custos", () => {
     expect(rota.availability.status).toBe("UNKNOWN");
     expect(rota.distanceKm.status).toBe("UNKNOWN");
     expect(rota.estimatedDurationHours.status).toBe("UNKNOWN");
-    expect(rota.acceptedCargoTypes).toEqual([]);
+    expect(isKnown(rota.acceptedCargoTypes)).toBe(false);
     expect(rota.costComponents).toEqual([]);
   });
 

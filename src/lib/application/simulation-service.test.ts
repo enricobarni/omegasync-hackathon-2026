@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BASELINE_CATALOG } from "../catalog";
+import { DEMO_CATALOG } from "../catalog";
 import type { Cargo, Facility, Route } from "../domain";
 import { createEvidence, known } from "../domain";
 import { buildStorageComponent } from "../engine";
@@ -36,7 +36,7 @@ const ROTA_VIAVEL: Route = {
   origin: TERMINAL,
   destination: RECINTO,
   requiresDta: { status: "REQUIRED", evidence: EVID },
-  acceptedCargoTypes: ["FCL"],
+  acceptedCargoTypes: known(["FCL"], EVID),
   availability: { status: "AVAILABLE", evidence: EVID },
   distanceKm: known(20, EVID),
   estimatedDurationHours: known(8, EVID),
@@ -59,7 +59,7 @@ describe("runSimulation — baseline honesto", () => {
   it("com registro vazio, anuência não resolvida e liberação indeterminada", () => {
     const result = runSimulation({
       cargo: CARGA,
-      routes: BASELINE_CATALOG.routes,
+      routes: DEMO_CATALOG.routes,
     });
 
     expect(result.anuencia.status).toBe("NOT_FOUND");

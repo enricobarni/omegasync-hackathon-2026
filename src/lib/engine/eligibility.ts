@@ -22,7 +22,7 @@ import type {
   RouteEligibilityStatus,
   TrackedValue,
 } from "../domain";
-import { acceptsCargoType, isKnown } from "../domain";
+import { cargoTypeAcceptance, isKnown } from "../domain";
 
 /** Restrições avaliadas pelo motor de elegibilidade. */
 export const ELIGIBILITY_RULES = [
@@ -107,7 +107,9 @@ function evaluateAnuencia(input: EligibilityInput): EligibilityReason {
 }
 
 function evaluateCargoType(cargo: Cargo, route: Route): EligibilityReason {
-  if (route.acceptedCargoTypes.length === 0) {
+  const acceptance = cargoTypeAcceptance(route, cargo.cargoType);
+
+  if (acceptance === "UNKNOWN") {
     return {
       rule: "CARGO_TYPE",
       outcome: "INDETERMINATE",
@@ -115,7 +117,7 @@ function evaluateCargoType(cargo: Cargo, route: Route): EligibilityReason {
     };
   }
 
-  if (!acceptsCargoType(route, cargo.cargoType)) {
+  if (acceptance === "REJECTED") {
     return {
       rule: "CARGO_TYPE",
       outcome: "BLOCK",
@@ -182,11 +184,25 @@ function evaluateEntrepostagem(
     };
   }
 
-  if (route.destination.type === "ENTREPOSTO_ADUANEIRO") {
+  // Entreposto é um REGIME habilitado no recinto (AJUSTE 3.3/15.3), não um
+  // tipo físico. A habilitação é rastreável; desconhecida => indeterminado.
+  const regimes = route.destination.enabledRegimes;
+  if (!regimes || !isKnown(regimes)) {
+    return {
+      rule: "ENTREPOSTAGEM",
+      outcome: "INDETERMINATE",
+      detail:
+        "Habilitação do recinto de destino ao regime de entreposto não informada.",
+      evidence: necessita.evidence,
+    };
+  }
+
+  if (regimes.value.includes("ENTREPOSTO_ADUANEIRO")) {
     return {
       rule: "ENTREPOSTAGEM",
       outcome: "PASS",
-      detail: "Rota termina em entreposto aduaneiro, atendendo à necessidade.",
+      detail:
+        "Recinto de destino habilitado ao regime de entreposto, atendendo à necessidade.",
       evidence: necessita.evidence,
     };
   }
@@ -195,7 +211,7 @@ function evaluateEntrepostagem(
     rule: "ENTREPOSTAGEM",
     outcome: "BLOCK",
     detail:
-      "Operação requer entrepostagem, mas a rota não termina em entreposto aduaneiro.",
+      "Operação requer entrepostagem, mas o recinto de destino não é habilitado ao regime de entreposto.",
     evidence: necessita.evidence,
   };
 }
@@ -253,7 +269,7 @@ export function evaluateRouteEligibility(
 /** Avalia a elegibilidade de todas as rotas informadas para a carga. */
 export function evaluateEligibility(
   input: EligibilityInput,
-  routes: Route[],
+  routes: readonly Route[],
 ): RouteEligibility[] {
   return routes.map((route) => evaluateRouteEligibility(input, route));
 }

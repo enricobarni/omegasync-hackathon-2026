@@ -12,8 +12,23 @@ import type { CargoType } from "./cargo";
 import type { CostComponent, CostSummary } from "./cost";
 import { summarizeCosts } from "./cost";
 import type { Availability, DtaRequirement, Facility } from "./customs";
+import { isKnown } from "./information";
 import type { TrackedValue } from "./information";
-import type { SourceReference } from "./provenance";
+import type { Evidence, SourceReference } from "./provenance";
+
+/**
+ * Restrição de rota com proveniência (AJUSTE 1.4). Uma restrição afirma um
+ * fato operacional/documental e, portanto, deve ser rastreável.
+ */
+export interface RouteRestriction {
+  code: string;
+  description: string;
+  evidence?: Evidence;
+}
+
+/** Aceitação de um tipo de carga por uma rota (AJUSTE 1.1). */
+export const CARGO_ACCEPTANCE = ["ACCEPTED", "REJECTED", "UNKNOWN"] as const;
+export type CargoAcceptance = (typeof CARGO_ACCEPTANCE)[number];
 
 /**
  * Estado de elegibilidade de uma rota. Contrato compartilhado; a avaliação
@@ -40,23 +55,34 @@ export interface Route {
   origin: Facility;
   destination: Facility;
   requiresDta: DtaRequirement;
-  /** Tipos de carga aceitos pela rota; lista vazia => nenhum confirmado. */
-  acceptedCargoTypes: CargoType[];
+  /**
+   * Tipos de carga aceitos pela rota, rastreável (AJUSTE 1.1). A ROTA é a
+   * autoridade única sobre isso (o recinto não guarda mais essa informação).
+   * `UNKNOWN` = não se sabe; `KNOWN []` = confirmado que nenhum é aceito;
+   * `KNOWN [...]` = tipos confirmados. Nunca confundir desconhecido com falso.
+   */
+  acceptedCargoTypes: TrackedValue<CargoType[]>;
   availability: Availability;
   distanceKm: TrackedValue<number>;
   estimatedDurationHours: TrackedValue<number>;
-  restrictions: string[];
+  restrictions: RouteRestriction[];
   costComponents: CostComponent[];
   source?: SourceReference;
 }
 
 /**
- * Indica se a rota aceita, de forma explícita, um tipo de carga.
- * Uma lista de tipos aceitos vazia significa "nenhum tipo confirmado" e
- * portanto retorna `false` — não se assume aceitação.
+ * Aceitação de um tipo de carga pela rota, preservando o estado de informação
+ * (AJUSTE 1.1): desconhecido nunca vira "rejeitado".
  */
-export function acceptsCargoType(route: Route, cargoType: CargoType): boolean {
-  return route.acceptedCargoTypes.includes(cargoType);
+export function cargoTypeAcceptance(
+  route: Route,
+  cargoType: CargoType,
+): CargoAcceptance {
+  const accepted = route.acceptedCargoTypes;
+  if (!isKnown(accepted)) {
+    return "UNKNOWN";
+  }
+  return accepted.value.includes(cargoType) ? "ACCEPTED" : "REJECTED";
 }
 
 /**

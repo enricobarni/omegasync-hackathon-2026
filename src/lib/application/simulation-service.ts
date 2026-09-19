@@ -54,7 +54,7 @@ import type {
 export interface SimulationInput {
   cargo: Cargo;
   /** Rotas a avaliar. */
-  routes: Route[];
+  routes: readonly Route[];
   /** Necessidade de entrepostagem (opcional; desconhecida se ausente). */
   necessitaEntrepostagem?: TrackedValue<boolean>;
   /** Componentes de custo por rota, montados pelo chamador (ETAPA 5 + tarifas). */

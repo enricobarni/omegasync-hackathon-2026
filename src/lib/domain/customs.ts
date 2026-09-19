@@ -7,7 +7,7 @@
  * recintos, tarifas) pertencem a etapas posteriores do PLANEJAMENTO.md.
  */
 
-import type { CargoType } from "./cargo";
+import type { TrackedValue } from "./information";
 import type { Evidence, SourceReference } from "./provenance";
 
 /** Zona aduaneira (FONTES.md §18). */
@@ -15,18 +15,28 @@ export const CUSTOMS_ZONES = ["ZONA_PRIMARIA", "ZONA_SECUNDARIA"] as const;
 export type CustomsZone = (typeof CUSTOMS_ZONES)[number];
 
 /**
- * Tipo de estrutura/recinto. São conceitos distintos e não devem ser
- * tratados como sinônimos (FONTES.md §19): retroporto != porto seco !=
- * recinto alfandegado != entreposto aduaneiro.
+ * Tipo de estrutura FÍSICA/operacional do recinto (FONTES.md §19). São
+ * conceitos distintos: retroporto != porto seco != recinto alfandegado.
+ *
+ * Entreposto aduaneiro NÃO é um tipo físico — é um REGIME (ver CUSTOMS_REGIMES
+ * e o módulo `customs/entreposto`). Removido daqui na rodada de correção
+ * (AJUSTE 1.3/3.3/15.3).
  */
 export const FACILITY_TYPES = [
   "TERMINAL",
   "RECINTO_ALFANDEGADO",
   "PORTO_SECO",
   "RETROPORTO",
-  "ENTREPOSTO_ADUANEIRO",
 ] as const;
 export type FacilityType = (typeof FACILITY_TYPES)[number];
+
+/**
+ * Regimes aduaneiros aplicáveis a um recinto real (não são tipos físicos).
+ * O entreposto aduaneiro é um regime cuja habilitação depende de validação em
+ * fonte oficial (FONTES.md §19); ver `customs/entreposto`.
+ */
+export const CUSTOMS_REGIMES = ["ENTREPOSTO_ADUANEIRO"] as const;
+export type CustomsRegime = (typeof CUSTOMS_REGIMES)[number];
 
 /** Estado de anuência (motor anterior; FONTES.md §13.2). */
 export const ANUENCIA_STATES = [
@@ -93,16 +103,24 @@ export function dtaRequirementUnknown(reason?: string): DtaRequirement {
 }
 
 /**
- * Recinto/estrutura como nó de uma rota. Identidade e classificação;
- * atributos operacionais (disponibilidade, tipos de carga aceitos) são
- * expressos na rota, que conecta os recintos.
+ * Recinto/estrutura como nó de uma rota. Identidade e classificação física.
+ *
+ * Os tipos de carga aceitos são atributo da ROTA (autoridade única, ver
+ * AJUSTE 1.1), não do recinto. Regimes habilitados (ex.: entreposto) são
+ * rastreáveis e dependem de validação (AJUSTE 15.3).
  */
 export interface Facility {
   id: string;
   name: string;
   zone: CustomsZone;
   type: FacilityType;
-  /** Tipos de carga que o recinto comporta, quando conhecidos. */
-  acceptedCargoTypes?: CargoType[];
+  /** Fonte que comprova a existência/identidade do recinto. */
   source?: SourceReference;
+  /**
+   * Fonte que comprova a CLASSIFICAÇÃO (zona/tipo), quando distinta da fonte de
+   * existência (AJUSTE 2.5). Pode ser omitida quando ainda não verificada.
+   */
+  classificationSource?: SourceReference;
+  /** Regimes aduaneiros para os quais o recinto está habilitado (rastreável). */
+  enabledRegimes?: TrackedValue<CustomsRegime[]>;
 }

@@ -4,7 +4,7 @@ import {
   toSimulationResponse,
   validateSimulationRequest,
 } from "./simulation-dto";
-import { BASELINE_CATALOG } from "../catalog";
+import { DEMO_CATALOG } from "../catalog";
 import { runSimulation } from "../application";
 
 const CARGO_VALIDO = {
@@ -80,13 +80,13 @@ describe("toSimulationResponse", () => {
     }
     const result = runSimulation({
       ...validation.value,
-      routes: BASELINE_CATALOG.routes,
+      routes: DEMO_CATALOG.routes,
     });
     const dto = toSimulationResponse(result);
 
     expect(dto.clearance.status).toBe("INDETERMINADA");
     expect(dto.anuencia.status).toBe("NOT_FOUND");
-    expect(dto.routes.length).toBe(BASELINE_CATALOG.routes.length);
+    expect(dto.routes.length).toBe(DEMO_CATALOG.routes.length);
     expect(dto.routes[0].cost.total).toBeNull();
     expect(Array.isArray(dto.comparison.viable)).toBe(true);
     expect(dto.window48h.applicability).toBe("INDETERMINADO");

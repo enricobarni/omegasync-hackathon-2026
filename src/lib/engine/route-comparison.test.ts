@@ -8,11 +8,23 @@ import type { RouteComparisonCandidate } from "./route-comparison";
 const EVID = createEvidence("USUARIO");
 
 function completeCost(total: number): CostSummary {
-  return { knownSubtotal: total, total, complete: true, hasUnknown: false };
+  return {
+    knownSubtotal: total,
+    total,
+    complete: true,
+    hasUnknown: false,
+    hasComponents: true,
+  };
 }
 
 function incompleteCost(subtotal: number): CostSummary {
-  return { knownSubtotal: subtotal, total: null, complete: false, hasUnknown: true };
+  return {
+    knownSubtotal: subtotal,
+    total: null,
+    complete: false,
+    hasUnknown: true,
+    hasComponents: true,
+  };
 }
 
 function candidate(
