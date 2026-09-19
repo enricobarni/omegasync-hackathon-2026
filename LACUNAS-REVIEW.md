@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-19 — após a ETAPA 8.
+Última atualização: 2026-09-19 — após a ETAPA 9.
 
 ---
 
@@ -37,6 +37,7 @@ explícitas.
 | L11 | Resolução de anuência (NCM → órgão) | 3, 8 | Mecanismo `resolveAnuenciaByNcm` + registro **vazio** (não inventado); sem entrada → NOT_FOUND | ABERTA | Portal Único/Siscomex (FONTES §13) |
 | L12 | Prazos oficiais por modalidade de anuência | 8 | Expostos como **estimativa de pesquisa** (confiança C) com caveat "não SLA oficial"; não hardcodados como oficiais | EM USO COMO PREMISSA | Fonte primária (FONTES §14) |
 | L18 | Atributos do tratamento administrativo além da NCM | 8 | Campo `requiredAttributes` previsto no registro; NCM sozinha não determina órgão (FONTES §13.5) | ABERTA | Portal Único/Siscomex |
+| L19 | Mapeamento rota → tarifa/distância/prazo na simulação | 9 | O serviço recebe `routeCostComponents` do chamador; sem custo informado → componente UNKNOWN (total null, nunca zero) | ABERTA | Catálogo real + tarifas (ETAPAs 2/4) |
 | L13 | Mínimos de armazenagem (DP World/Ecoporto) | 4 | Não documentados → `minimumValue: null` (não zero) | ABERTA | Tabelas dos terminais |
 | L14 | Fração de carga anuente em Santos; canal pós-DUIMP específico de Santos | — | Não usados como probabilidade individual | ABERTA | Estatística oficial (FONTES §24) |
 | L15 | SSE — situação não pacificada | 5 | `sseAtivo = false` por padrão; OFF → componente NOT_APPLICABLE | EM USO COMO PREMISSA | STJ/TCU/Cade (FONTES §20) |
@@ -133,6 +134,19 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   registro de dados), consumido pela aplicação (ETAPA 9), que resolve a anuência
   antes de alimentar o motor de elegibilidade (ETAPA 3).
 
+### ETAPA 9 — Serviço de simulação
+- **R23 — Orquestração pura:** `runSimulation` só encadeia módulos
+  (enriquecimento → liberação → elegibilidade → custo → comparação → janela →
+  evidências). Nenhuma regra de negócio nova na aplicação; resolve os seams
+  deixados em R08/R11/R15/R22.
+- **R24 — Custo não informado ≠ zero:** rota sem `routeCostComponents` recebe um
+  componente UNKNOWN explícito ("Custo não informado"), tornando o total `null`
+  em vez de 0 (ver L19). Decisão da aplicação, não do domínio.
+- **R25 — Entrada já normalizada:** o serviço assume domínio normalizado; a
+  validação/normalização de entrada crua e a integração Logcomex ficam para as
+  ETAPAs 10/11. O mapeamento rota→tarifa também é responsabilidade do chamador
+  (ver L19), para não inventar tarifa/distância por rota.
+
 ---
 
 ## 3. Histórico de atualizações
@@ -143,3 +157,5 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   vínculo dos inputs da janela) e pontos de review R16–R18 (regra de 48h).
 - **2026-09-19 — ETAPA 8:** atualizadas L11–L12 e adicionada L18 (atributos do
   tratamento administrativo); pontos de review R19–R22 (anuência/liberação).
+- **2026-09-19 — ETAPA 9:** adicionada L19 (mapeamento rota→tarifa) e pontos de
+  review R23–R25 (serviço de simulação/orquestração).
