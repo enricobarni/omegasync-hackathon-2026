@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-19 — após a ETAPA 16.
+Última atualização: 2026-09-19 — após a ETAPA 17 (roadmap concluído).
 
 ---
 
@@ -230,6 +230,18 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   dos componentes de custo conhecidos (além de anuência, janela e fatores), sem
   duplicar evidências (dedupe por origem+referência).
 
+### ETAPA 17 — Hardening da demo
+- **R47 — Resiliência de integração:** `analyzeDocumentWithFallback` e
+  `trackWithFallback` (`src/lib/logcomex/resilient.ts`) aplicam timeout e caem
+  no fallback offline em falha/timeout, marcando `degraded: true` — nunca falsa
+  certeza.
+- **R48 — Estados vazios/documentação:** guarda de "nenhuma rota" na UI; README
+  com execução, arquitetura e revisão de dados reais x premissas da demo.
+- **R49 — Lacunas remanescentes são de FONTE, não de código:** o roadmap está
+  concluído; as lacunas L01–L25 abertas dependem de dados/credenciais externos
+  (tarifas oficiais, disponibilidade, DTA, anuência real, cliente HTTP Logcomex),
+  todas modeladas como desconhecido/premissa, sem invenção.
+
 ---
 
 ## 3. Histórico de atualizações
@@ -256,3 +268,5 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   review R43–R44 (regime de entreposto aduaneiro).
 - **2026-09-19 — ETAPA 16:** L22 marcada RESOLVIDA (evidências no DTO e na UI);
   pontos de review R45–R46 (explicabilidade).
+- **2026-09-19 — ETAPA 17:** pontos de review R47–R49 (resiliência, estados
+  vazios, documentação); roadmap do PLANEJAMENTO.md concluído.

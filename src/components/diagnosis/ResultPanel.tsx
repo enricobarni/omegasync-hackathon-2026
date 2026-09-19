@@ -75,6 +75,9 @@ export function ResultPanel({ result }: { result: SimulationResponseDTO }) {
 
       <section className={styles.resultBlock}>
         <h2>Rotas</h2>
+        {result.routes.length === 0 ? (
+          <p className={styles.placeholder}>Nenhuma rota disponível no catálogo.</p>
+        ) : null}
         {result.routes.map((route) => (
           <article key={route.routeId} className={styles.routeCard}>
             <div className={styles.routeHead}>
