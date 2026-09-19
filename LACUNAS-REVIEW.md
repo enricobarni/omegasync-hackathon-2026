@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-19 — após a ETAPA 10.
+Última atualização: 2026-09-19 — após a ETAPA 11.
 
 ---
 
@@ -38,6 +38,8 @@ explícitas.
 | L12 | Prazos oficiais por modalidade de anuência | 8 | Expostos como **estimativa de pesquisa** (confiança C) com caveat "não SLA oficial"; não hardcodados como oficiais | EM USO COMO PREMISSA | Fonte primária (FONTES §14) |
 | L18 | Atributos do tratamento administrativo além da NCM | 8 | Campo `requiredAttributes` previsto no registro; NCM sozinha não determina órgão (FONTES §13.5) | ABERTA | Portal Único/Siscomex |
 | L19 | Mapeamento rota → tarifa/distância/prazo na simulação | 9 | O serviço recebe `routeCostComponents` do chamador; sem custo informado → componente UNKNOWN (total null, nunca zero) | ABERTA | Catálogo real + tarifas (ETAPAs 2/4) |
+| L20 | Cliente HTTP real do Logcomex (endpoint + credenciais) | 11 | Só a porta `DocumentAnalysisPort` + adapter puro + fallback; sem chamada de rede no núcleo, sem segredos versionados | ABERTA | Endpoint/credenciais via variável de ambiente (borda) |
+| L21 | Parsing de números em locale (ex.: "1.234,56") do Logcomex | 11 | `parseNumber` não adivinha locale: string não numérica → desconhecido | ABERTA | Confirmar formato real do provedor |
 | L13 | Mínimos de armazenagem (DP World/Ecoporto) | 4 | Não documentados → `minimumValue: null` (não zero) | ABERTA | Tabelas dos terminais |
 | L14 | Fração de carga anuente em Santos; canal pós-DUIMP específico de Santos | — | Não usados como probabilidade individual | ABERTA | Estatística oficial (FONTES §24) |
 | L15 | SSE — situação não pacificada | 5 | `sseAtivo = false` por padrão; OFF → componente NOT_APPLICABLE | EM USO COMO PREMISSA | STJ/TCU/Cade (FONTES §20) |
@@ -161,6 +163,19 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
 - **R29 — Config de teste:** adicionado `vitest.config.mts` resolvendo o alias
   `@` para `src`, permitindo testar o Route Handler. Sem impacto em runtime.
 
+### ETAPA 11 — Logcomex: análise documental
+- **R30 — DTOs do provedor fora do domínio:** o schema Logcomex (FONTES §25)
+  vive em `src/lib/logcomex`; o domínio nunca depende dele. Adapter puro
+  converte DTO → enriquecimento com proveniência LOGCOMEX (ver R25/R08).
+- **R31 — `ncm_sugerido != ncm_confirmado` no tipo:** `buildCargoFromEnrichment`
+  exige `confirmedNcm` do usuário; a sugestão do Logcomex nunca vira a NCM
+  confirmada da carga. Logcomex enriquece, não decide rota.
+- **R32 — Ausência preservada:** campos faltantes viram desconhecido; risco/
+  resumo ficam como texto (sem inferir fato estruturado). Fallback offline
+  mantém tudo desconhecido (ver L20).
+- **R33 — CIF derivado:** `deriveCif` = FOB+frete+seguro (Incoterms) só quando os
+  três são conhecidos; caso contrário desconhecido. Definição, não invenção.
+
 ---
 
 ## 3. Histórico de atualizações
@@ -175,3 +190,5 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   review R23–R25 (serviço de simulação/orquestração).
 - **2026-09-19 — ETAPA 10:** pontos de review R26–R29 (API de simulação, DTOs,
   validação de borda e config de teste).
+- **2026-09-19 — ETAPA 11:** adicionadas L20–L21 (cliente HTTP e parsing de
+  locale do Logcomex) e pontos de review R30–R33 (análise documental).
