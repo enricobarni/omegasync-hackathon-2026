@@ -168,6 +168,35 @@ export function ResultPanel({ result }: { result: SimulationResponseDTO }) {
           </ul>
         </section>
       ) : null}
+
+      {result.evidences.length > 0 ? (
+        <section className={styles.resultBlock}>
+          <h2>Evidências</h2>
+          <details className={styles.disclosure}>
+            <summary>Fontes e proveniência ({result.evidences.length})</summary>
+            <ul className={styles.list} style={{ marginTop: 8 }}>
+              {result.evidences.map((e, i) => (
+                <li key={i}>
+                  <strong>{e.originLabel}</strong>
+                  {e.isPremise ? " · premissa" : ""}
+                  {e.confidenceLabel ? ` · ${e.confidenceLabel}` : ""}
+                  {e.reference ? ` — ${e.reference}` : ""}
+                  {e.source ? (
+                    <div className={styles.factorTendency}>
+                      {e.source.title} · {e.source.publisher}
+                      {e.source.effectiveFrom
+                        ? ` · vigência ${e.source.effectiveFrom}`
+                        : e.source.accessedAt
+                          ? ` · acesso ${e.source.accessedAt}`
+                          : ""}
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </details>
+        </section>
+      ) : null}
     </div>
   );
 }
