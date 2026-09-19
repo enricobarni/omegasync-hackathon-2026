@@ -10,3 +10,4 @@ export * from "./eligibility";
 export * from "./behavioral-factors";
 export * from "./route-cost";
 export * from "./route-comparison";
+export * from "./window-48h";
