@@ -40,27 +40,27 @@ describe("assessBehavioralFactors", () => {
       ctx({ possuiEstruturaSincronizada: known(false, EVID) }),
     );
     const estrutura = factor(factors, "ESTRUTURA");
-    expect(estrutura.present).toBe(true);
+    expect(estrutura.state).toBe("PRESENT");
     expect(estrutura.tendency).toContain("recinto");
   });
 
   it("ESTRUTURA desconhecida quando não informada (unknown != false)", () => {
     const estrutura = factor(assessBehavioralFactors(ctx()), "ESTRUTURA");
-    expect(estrutura.present).toBeNull();
+    expect(estrutura.state).toBe("UNKNOWN");
   });
 
   it("CAIXA não se aplica a OEA Excelência", () => {
     const factors = assessBehavioralFactors(
       ctx({ cargo: { ...CARGA_BASE, oeaStatus: "EXCELENCIA" } }),
     );
-    expect(factor(factors, "CAIXA").present).toBe(false);
+    expect(factor(factors, "CAIXA").state).toBe("NOT_APPLICABLE");
   });
 
   it("CAIXA presente quando não há caixa para antecipação", () => {
     const factors = assessBehavioralFactors(
       ctx({ possuiCaixaParaAntecipacao: known(false, EVID) }),
     );
-    expect(factor(factors, "CAIXA").present).toBe(true);
+    expect(factor(factors, "CAIXA").state).toBe("PRESENT");
   });
 
   it("ANUENCIA presente para não automática posterior, com tendência a retroporto", () => {
@@ -70,33 +70,33 @@ describe("assessBehavioralFactors", () => {
       evidence: createEvidence("USUARIO"),
     };
     const anu = factor(assessBehavioralFactors(ctx({ anuencia })), "ANUENCIA");
-    expect(anu.present).toBe(true);
+    expect(anu.state).toBe("PRESENT");
     expect(anu.tendency).toContain("retroporto");
   });
 
   it("CANAL: verde ausente, não verde presente, não revelado desconhecido", () => {
-    expect(factor(assessBehavioralFactors(ctx()), "CANAL").present).toBe(false);
+    expect(factor(assessBehavioralFactors(ctx()), "CANAL").state).toBe("ABSENT");
     expect(
       factor(
         assessBehavioralFactors(ctx({ cargo: { ...CARGA_BASE, channel: "AMARELO" } })),
         "CANAL",
-      ).present,
-    ).toBe(true);
+      ).state,
+    ).toBe("PRESENT");
     expect(
       factor(
         assessBehavioralFactors(ctx({ cargo: { ...CARGA_BASE, channel: "NAO_REVELADO" } })),
         "CANAL",
-      ).present,
-    ).toBeNull();
+      ).state,
+    ).toBe("UNKNOWN");
   });
 
   it("JANELA_48H desconhecida quando não informada; presente quando inviável", () => {
-    expect(factor(assessBehavioralFactors(ctx()), "JANELA_48H").present).toBeNull();
+    expect(factor(assessBehavioralFactors(ctx()), "JANELA_48H").state).toBe("UNKNOWN");
     expect(
       factor(
         assessBehavioralFactors(ctx({ janela48hViavel: known(false, EVID) })),
         "JANELA_48H",
-      ).present,
-    ).toBe(true);
+      ).state,
+    ).toBe("PRESENT");
   });
 });

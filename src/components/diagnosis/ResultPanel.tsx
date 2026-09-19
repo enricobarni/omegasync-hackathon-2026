@@ -7,8 +7,8 @@ import {
   clearanceLabel,
   eligibilityLabel,
   formatCostTotal,
+  behavioralStateLabel,
   formatKnownSubtotal,
-  presenceLabel,
   windowLabel,
 } from "@/lib/ui/format";
 import styles from "./diagnosis.module.css";
@@ -152,7 +152,7 @@ export function ResultPanel({ result }: { result: SimulationResponseDTO }) {
           <div key={factor.kind} className={styles.factor}>
             <span>{factor.kind}</span>
             <span>
-              {presenceLabel(factor.present)}
+              {behavioralStateLabel(factor.state)}
               {factor.tendency ? (
                 <span className={styles.factorTendency}> — {factor.tendency}</span>
               ) : null}

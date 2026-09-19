@@ -180,7 +180,8 @@ export interface SimulationResponseDTO {
   window48h: { applicability: string; viability: string | null };
   behavioralFactors: Array<{
     kind: string;
-    present: boolean | null;
+    state: string;
+    detail: string;
     tendency?: string;
   }>;
   evidences: EvidenceView[];
@@ -232,7 +233,8 @@ export function toSimulationResponse(
     },
     behavioralFactors: result.behavioralFactors.map((factor) => ({
       kind: factor.kind,
-      present: factor.present,
+      state: factor.state,
+      detail: factor.detail,
       tendency: factor.tendency,
     })),
     evidences: toEvidenceViews(result.evidences),

@@ -14,8 +14,10 @@ export const SOURCE_DPWORLD_SANTOS: SourceReference = {
   id: "dpworld-santos-armazenagem-2026-08-31",
   title: "Tabela pública de armazenagem — DP World Santos",
   publisher: "DP World Santos",
+  // Data de CAPTURA (FONTES §4), não vigência: effectiveFrom fica ausente
+  // porque o baseline não sustenta início de vigência (AJUSTE 2.2).
   accessedAt: "2026-08-31",
-  effectiveFrom: "2026-08-31",
+  consulted: true,
   confidence: "B",
   kind: "OFFICIAL_TARIFF",
 };
@@ -26,6 +28,7 @@ export const SOURCE_BTP_SANTOS: SourceReference = {
   title: "Baseline de armazenagem — BTP (Brasil Terminal Portuário)",
   publisher: "BTP",
   accessedAt: "2026-08-31",
+  consulted: true,
   confidence: "C",
   kind: "OFFICIAL_TARIFF",
 };
@@ -33,15 +36,15 @@ export const SOURCE_BTP_SANTOS: SourceReference = {
 /**
  * Conceito de trânsito aduaneiro (DTA) como instrumento de transferência de
  * carga sob controle aduaneiro da Zona Primária para a Zona Secundária
- * (FONTES.md §17). Fonte oficial preferida: Manual de Trânsito Aduaneiro/RFB.
+ * (FONTES.md §17). Fonte oficial preferida A CONSULTAR — não foi efetivamente
+ * acessada; é orientação administrativa, não norma (AJUSTE 2.2).
  */
 export const SOURCE_DTA_MANUAL: SourceReference = {
   id: "rfb-manual-transito-aduaneiro",
-  title: "Manual de Trânsito Aduaneiro",
+  title: "Manual de Trânsito Aduaneiro (fonte a consultar)",
   publisher: "Receita Federal do Brasil",
-  accessedAt: "2026-09-19",
-  confidence: "B",
-  kind: "OFFICIAL_REGULATION",
+  consulted: false,
+  kind: "OFFICIAL_GUIDANCE",
 };
 
 /**

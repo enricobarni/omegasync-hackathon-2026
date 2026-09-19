@@ -119,6 +119,35 @@ describe("construtores de componente", () => {
   });
 });
 
+describe("invariantes numéricas dos construtores (AJUSTE 5.5)", () => {
+  it("entradas inválidas (negativo/Infinity/NaN) viram desconhecido, não NaN/negativo", () => {
+    expect(
+      buildStorageComponent({ cif: -1, daysOfStay: 5, rates: DP_WORLD_RATES, evidence: EVID })
+        .amount.status,
+    ).toBe("UNKNOWN");
+    expect(
+      buildTransportComponent({ distanceKm: Infinity, costPerKm: 5, reference: "x" })
+        .amount.status,
+    ).toBe("UNKNOWN");
+    expect(
+      buildDirectDischargeComponent({ cif: Number.NaN, rate: 0.0054, minimumValue: null, evidence: EVID })
+        .amount.status,
+    ).toBe("UNKNOWN");
+    expect(
+      buildCapitalComponent({
+        taxableAmount: 1000,
+        daysAnticipated: 10,
+        monthlyRate: 0.01,
+        monthDays: 0,
+        reference: "x",
+      }).amount.status,
+    ).toBe("UNKNOWN");
+    expect(
+      buildSseComponent({ active: true, amountWhenActive: -5 }).amount.status,
+    ).toBe("UNKNOWN");
+  });
+});
+
 describe("computeRouteCost", () => {
   it("soma componentes conhecidos e não bloqueia com não aplicável", () => {
     const result = computeRouteCost("rota-a", [

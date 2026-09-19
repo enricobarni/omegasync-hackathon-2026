@@ -115,7 +115,7 @@ describe("runSimulation — rota viável com dados", () => {
 
     expect(result.behavioralFactors.length).toBeGreaterThan(0);
     const estrutura = result.behavioralFactors.find((f) => f.kind === "ESTRUTURA");
-    expect(estrutura?.present).toBe(true);
+    expect(estrutura?.state).toBe("PRESENT");
     expect(result.evidences.length).toBeGreaterThan(0);
   });
 });

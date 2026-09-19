@@ -37,6 +37,11 @@ function roundCents(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+/** Invariante numérica (AJUSTE 5.5): valor finito e não negativo. */
+function isFiniteNonNegative(value: number): boolean {
+  return Number.isFinite(value) && value >= 0;
+}
+
 /** Alíquotas de armazenagem por período (fields null = desconhecido). */
 export interface StorageRates {
   daysPerPeriod: number;
@@ -134,6 +139,11 @@ export function buildStorageComponent(input: StorageComponentInput): CostCompone
     amount = unknownAmount("Tarifa de armazenagem não consolidada.");
   } else if (input.cif === null || input.daysOfStay === null) {
     amount = unknownAmount("CIF ou dias de permanência não informados.");
+  } else if (
+    !isFiniteNonNegative(input.cif) ||
+    !isFiniteNonNegative(input.daysOfStay)
+  ) {
+    amount = unknownAmount("CIF ou dias de permanência com valor inválido.");
   } else {
     const value = calculateStorageAdValorem(input.cif, input.daysOfStay, input.rates);
     amount =
@@ -157,13 +167,19 @@ export function buildDirectDischargeComponent(
   input: DirectDischargeComponentInput,
 ): CostComponent {
   const label = input.label ?? "Descarga direta";
+  const invalid =
+    input.cif !== null &&
+    input.rate !== null &&
+    (!isFiniteNonNegative(input.cif) || !isFiniteNonNegative(input.rate));
   const amount: MonetaryAmount =
     input.cif === null || input.rate === null
       ? unknownAmount("CIF ou alíquota de descarga direta não informados.")
-      : knownAmount(
-          calculateDirectDischarge(input.cif, input.rate, input.minimumValue),
-          input.evidence,
-        );
+      : invalid
+        ? unknownAmount("CIF ou alíquota de descarga direta com valor inválido.")
+        : knownAmount(
+            calculateDirectDischarge(input.cif, input.rate, input.minimumValue),
+            input.evidence,
+          );
 
   return createCostComponent("DESCARGA", label, amount);
 }
@@ -179,13 +195,19 @@ export function buildTransportComponent(
   input: TransportComponentInput,
 ): CostComponent {
   const label = input.label ?? "Transporte";
+  const invalid =
+    input.distanceKm !== null &&
+    input.costPerKm !== null &&
+    (!isFiniteNonNegative(input.distanceKm) || !isFiniteNonNegative(input.costPerKm));
   const amount: MonetaryAmount =
     input.distanceKm === null || input.costPerKm === null
       ? unknownAmount("Distância ou custo por km não informados.")
-      : knownAmount(calculateTransportCost(input.distanceKm, input.costPerKm), {
-          origin: "PREMISSA_SIMULACAO",
-          reference: input.reference,
-        });
+      : invalid
+        ? unknownAmount("Distância ou custo por km com valor inválido.")
+        : knownAmount(calculateTransportCost(input.distanceKm, input.costPerKm), {
+            origin: "PREMISSA_SIMULACAO",
+            reference: input.reference,
+          });
 
   return createCostComponent("TRANSPORTE", label, amount);
 }
@@ -203,18 +225,28 @@ export function buildCapitalComponent(
   input: CapitalComponentInput,
 ): CostComponent {
   const label = input.label ?? "Custo de capital";
+  const invalid =
+    input.taxableAmount !== null &&
+    input.monthlyRate !== null &&
+    (!isFiniteNonNegative(input.taxableAmount) ||
+      !isFiniteNonNegative(input.monthlyRate) ||
+      !isFiniteNonNegative(input.daysAnticipated) ||
+      !Number.isFinite(input.monthDays) ||
+      input.monthDays <= 0);
   const amount: MonetaryAmount =
     input.taxableAmount === null || input.monthlyRate === null
       ? unknownAmount("Valor de tributos ou taxa de capital não informados.")
-      : knownAmount(
-          calculateCapitalCost(
-            input.taxableAmount,
-            input.daysAnticipated,
-            input.monthlyRate,
-            input.monthDays,
-          ),
-          { origin: "PREMISSA_SIMULACAO", reference: input.reference },
-        );
+      : invalid
+        ? unknownAmount("Parâmetros de custo de capital com valor inválido.")
+        : knownAmount(
+            calculateCapitalCost(
+              input.taxableAmount,
+              input.daysAnticipated,
+              input.monthlyRate,
+              input.monthDays,
+            ),
+            { origin: "PREMISSA_SIMULACAO", reference: input.reference },
+          );
 
   return createCostComponent("CUSTO_CAPITAL", label, amount);
 }
@@ -234,6 +266,8 @@ export function buildSseComponent(input: SseComponentInput): CostComponent {
     amount = notApplicableAmount("SSE desativado na simulação (FONTES §20).");
   } else if (input.amountWhenActive === null) {
     amount = unknownAmount("Valor do SSE não informado.");
+  } else if (!isFiniteNonNegative(input.amountWhenActive)) {
+    amount = unknownAmount("Valor do SSE inválido.");
   } else {
     amount = knownAmount(input.amountWhenActive, {
       origin: "PREMISSA_SIMULACAO",
