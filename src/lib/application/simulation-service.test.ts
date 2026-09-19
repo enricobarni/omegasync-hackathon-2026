@@ -91,6 +91,7 @@ describe("runSimulation — rota viável com dados", () => {
       },
       window48h: {
         cargoYardWithdrawal: known(true, EVID),
+        facilityDiscriminatedInSchedule: known(true, EVID),
         withinBusinessWindow: known(true, EVID),
       },
     });
