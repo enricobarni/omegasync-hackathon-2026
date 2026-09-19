@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OmegaSync
 
-## Getting Started
+Motor de elegibilidade e comparação de rotas aduaneiro-operacionais, construído
+durante o Porto Hack Santos 2026.
 
-First, run the development server:
+Dada uma carga, o OmegaSync responde:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```text
+Quais rotas podem ser executadas?  →  Quanto custa cada uma?
+Quais restrições existem?  →  Qual o prazo/distância?  →  Com quais evidências?
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Como executar
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Requer Node 24+.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev      # ambiente de desenvolvimento em http://localhost:3000
+```
 
-## Learn More
+A tela principal (`/`) é o **Diagnóstico**: preencha os dados da carga e execute
+a simulação. A API correspondente é `POST /api/simulations`.
 
-To learn more about Next.js, take a look at the following resources:
+### Validação
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run test        # testes (vitest)
+npx tsc --noEmit    # checagem de tipos
+npm run lint        # eslint
+npm run build       # build de produção
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Arquitetura
 
-## Deploy on Vercel
+```text
+Apresentação / UI            src/app, src/components
+        ↓
+Aplicação / orquestração     src/lib/application (serviço de simulação)
+        ↓                    src/lib/api (DTOs, validação de borda)
+Domínio (determinístico)     src/lib/domain (contratos, estados de informação)
+   ├── elegibilidade         src/lib/engine (eligibility, custos, comparação, 48h)
+   └── comparação/custos
+        ↓
+Dados / integrações          src/lib/catalog, src/lib/tariffs, src/lib/customs,
+                             src/lib/logcomex, src/lib/portfolio
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Princípios (ver `AGENTS.md`):
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- o **domínio é determinístico** e não acessa rede, React, HTTP ou Logcomex;
+- integrações **fornecem dados**, não decidem rota;
+- `unknown != zero`, `unknown != false`, `não aplicável != false`;
+- todo dado externo relevante mantém **proveniência**.
+
+## Dados reais x premissas na demo
+
+O detalhe completo está em [`LACUNAS-REVIEW.md`](./LACUNAS-REVIEW.md) e em
+[`FONTES.md`](./FONTES.md). Resumo do que a demo usa:
+
+| Dado | Estado |
+| --- | --- |
+| Armazenagem DP World Santos / Ecoporto | Tabela pública datada (confiança A) |
+| Descarga Direta "Santos Brasil" | Baseline histórico com **ressalva de Imbituba** (confiança C) |
+| BTP | **Não consolidado** — não usado como constante |
+| Registro NCM → órgão anuente | **Vazio** — sem mapeamento inventado (Portal Único) |
+| Disponibilidade, distância, prazo, custo/km, capital, DTA | Desconhecidos / premissas explícitas |
+| Entreposto aduaneiro | Regime **pendente de validação** (Manual RFB) |
+| Logcomex (documental, tracking, mercado) | Adapters + fallback; cliente HTTP pendente de credenciais |
+
+Nada acima é convertido em número inventado: valores ausentes permanecem
+desconhecidos ou premissas rotuladas.
+
+## Resiliência
+
+As integrações Logcomex têm wrappers com **timeout e fallback offline**
+(`src/lib/logcomex/resilient.ts`): falha ou timeout retornam contexto vazio
+marcado como degradado, nunca uma falsa certeza.
+
+## Documentos do projeto
+
+- `PLANEJAMENTO.md` — etapas, escopo e ordem.
+- `FONTES.md` — baseline factual, fórmulas, tarifas, evidências.
+- `DESIGN.md` — identidade visual e frontend.
+- `LACUNAS-REVIEW.md` — lacunas de dados e decisões de review, etapa a etapa.
