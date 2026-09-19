@@ -12,3 +12,4 @@ export * from "./fallback";
 export * from "./tracking-dto";
 export * from "./tracking-adapter";
 export * from "./tracking-fallback";
+export * from "./resilient";
