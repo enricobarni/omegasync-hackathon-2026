@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-19 — após a ETAPA 7.
+Última atualização: 2026-09-19 — após a ETAPA 8.
 
 ---
 
@@ -34,8 +34,9 @@ explícitas.
 | L08 | Disponibilidade real de recinto/rota | 2, 3 | Mantida `UNKNOWN`; nunca inventada | ABERTA | Fonte dinâmica de disponibilidade (FONTES §24) |
 | L09 | Distâncias reais das rotas | 2 | `distanceKm` desconhecida na rota-modelo | ABERTA | Coleta/geodados |
 | L10 | Tipos de carga aceitos por recinto/rota | 2 | `acceptedCargoTypes` vazio; comparação não assume aceitação | ABERTA | Fonte operacional do recinto |
-| L11 | Resolução de anuência (NCM → órgão) | 3, 8 | Não modelada; motor trata anuência como entrada opcional; `ncm-anuentes` do repo antigo estava vazio | ABERTA | Portal Único/Siscomex (FONTES §13) |
-| L12 | Prazos oficiais por modalidade de anuência | 8 | Não hardcodados | ABERTA | Fonte primária (FONTES §14) |
+| L11 | Resolução de anuência (NCM → órgão) | 3, 8 | Mecanismo `resolveAnuenciaByNcm` + registro **vazio** (não inventado); sem entrada → NOT_FOUND | ABERTA | Portal Único/Siscomex (FONTES §13) |
+| L12 | Prazos oficiais por modalidade de anuência | 8 | Expostos como **estimativa de pesquisa** (confiança C) com caveat "não SLA oficial"; não hardcodados como oficiais | EM USO COMO PREMISSA | Fonte primária (FONTES §14) |
+| L18 | Atributos do tratamento administrativo além da NCM | 8 | Campo `requiredAttributes` previsto no registro; NCM sozinha não determina órgão (FONTES §13.5) | ABERTA | Portal Único/Siscomex |
 | L13 | Mínimos de armazenagem (DP World/Ecoporto) | 4 | Não documentados → `minimumValue: null` (não zero) | ABERTA | Tabelas dos terminais |
 | L14 | Fração de carga anuente em Santos; canal pós-DUIMP específico de Santos | — | Não usados como probabilidade individual | ABERTA | Estatística oficial (FONTES §24) |
 | L15 | SSE — situação não pacificada | 5 | `sseAtivo = false` por padrão; OFF → componente NOT_APPLICABLE | EM USO COMO PREMISSA | STJ/TCU/Cade (FONTES §20) |
@@ -118,6 +119,20 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   regulatória (perde status de carga-pátio) e evidência de campo E28/E31; nenhum
   valor monetário foi inventado (ver L16, FONTES §16).
 
+### ETAPA 8 — Tratamento administrativo / anuência
+- **R19 — Descoberta central codificada:** `assessClearance` combina canal +
+  anuência e deixa explícito que **canal verde não basta**: verde com anuência
+  não resolvida → INDETERMINADA; verde com anuência não automática posterior →
+  PENDENTE; anuência impeditiva/prévia → BLOQUEADA independentemente do canal.
+- **R20 — Registro NCM → órgão vazio:** `ANUENCIA_REGISTRY_BASELINE = []`; sem
+  fonte, `resolveAnuenciaByNcm` retorna NOT_FOUND. Nada inventado (ver L11/L18).
+- **R21 — Prazos como estimativa, não SLA:** `getAnuenciaDeadlineEstimate`
+  retorna valores de pesquisa (confiança C) com caveat explícito; nunca tratados
+  como prazo oficial (ver L12).
+- **R22 — Placement:** módulo em `src/lib/customs/` (regras administrativas +
+  registro de dados), consumido pela aplicação (ETAPA 9), que resolve a anuência
+  antes de alimentar o motor de elegibilidade (ETAPA 3).
+
 ---
 
 ## 3. Histórico de atualizações
@@ -126,3 +141,5 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   pontos de review R01–R15 das ETAPAS 1 a 6.
 - **2026-09-19 — ETAPA 7:** adicionadas lacunas L16–L17 (custo de no-show e
   vínculo dos inputs da janela) e pontos de review R16–R18 (regra de 48h).
+- **2026-09-19 — ETAPA 8:** atualizadas L11–L12 e adicionada L18 (atributos do
+  tratamento administrativo); pontos de review R19–R22 (anuência/liberação).
