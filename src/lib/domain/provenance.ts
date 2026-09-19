@@ -11,9 +11,11 @@
 export const CONFIDENCE_LEVELS = ["A", "B", "C", "N1"] as const;
 export type ConfidenceLevel = (typeof CONFIDENCE_LEVELS)[number];
 
-/** Natureza da fonte de um dado (FONTES.md §31). */
+/** Natureza da fonte de um dado (FONTES.md §31; AJUSTE 2.2). */
 export const SOURCE_KINDS = [
   "OFFICIAL_REGULATION",
+  "OFFICIAL_GUIDANCE",
+  "OFFICIAL_SERVICE",
   "OFFICIAL_STATISTICS",
   "OFFICIAL_TARIFF",
   "OPERATOR_PROCEDURE",
@@ -48,8 +50,16 @@ export interface SourceReference {
   title: string;
   publisher: string;
   url?: string;
-  /** Data de acesso/captura (ISO-8601). */
-  accessedAt: string;
+  /**
+   * Data de acesso/captura (ISO-8601). Preenchida SOMENTE quando a fonte foi
+   * realmente consultada (AJUSTE 2.2/15.1); ausente para "fonte a consultar".
+   */
+  accessedAt?: string;
+  /**
+   * `false` quando é uma fonte preferida/planejada ainda NÃO consultada. Uma
+   * fonte não consultada não deve parecer efetivamente verificada.
+   */
+  consulted?: boolean;
   effectiveFrom?: string;
   effectiveTo?: string;
   confidence?: ConfidenceLevel;

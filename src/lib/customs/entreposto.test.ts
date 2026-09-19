@@ -1,54 +1,92 @@
 import { describe, expect, it } from "vitest";
 
+import { createEvidence } from "../domain";
 import {
   ENTREPOSTO_CONDITIONS,
   assessEntrepostoRegime,
   baselineEntrepostoRegime,
 } from "./entreposto";
-import type { ValidationState } from "./entreposto";
+import type { EntrepostoConditionStatus } from "./entreposto";
+
+const EVID = createEvidence("USUARIO", { reference: "validação de teste" });
+
+function allValidated(): EntrepostoConditionStatus[] {
+  return ENTREPOSTO_CONDITIONS.map((condition) => ({
+    condition,
+    state: "VALIDADA" as const,
+    detail: "validada",
+    evidence: EVID,
+  }));
+}
 
 describe("regime de entreposto — baseline", () => {
-  it("todas as condições começam não validadas", () => {
+  it("todas as condições começam não validadas, fonte a consultar", () => {
     const regime = baselineEntrepostoRegime();
     expect(regime.conditions).toHaveLength(ENTREPOSTO_CONDITIONS.length);
     expect(regime.conditions.every((c) => c.state === "NAO_VALIDADA")).toBe(true);
-    expect(regime.source.title).toBe("Manual de Entreposto Aduaneiro");
+    expect(regime.source.consulted).toBe(false);
+    expect(regime.source.accessedAt).toBeUndefined();
+    expect(regime.source.kind).toBe("OFFICIAL_GUIDANCE");
   });
 
-  it("prontidão é PENDENTE_VALIDACAO com todas as condições pendentes", () => {
+  it("prontidão é PENDENTE_VALIDACAO com todas pendentes; assessment carrega a fonte", () => {
     const assessment = assessEntrepostoRegime(baselineEntrepostoRegime());
     expect(assessment.readiness).toBe("PENDENTE_VALIDACAO");
+    expect(assessment.integrity).toBe("OK");
     expect(assessment.pendingConditions).toHaveLength(ENTREPOSTO_CONDITIONS.length);
-    expect(assessment.note).toContain("não deve ser confundido com retroporto");
+    expect(assessment.source.id).toBe("rfb-manual-entreposto-aduaneiro");
+    expect(assessment.note).toContain("não se confunde com retroporto");
   });
 });
 
-describe("assessEntrepostoRegime", () => {
-  it("fica PRONTO quando nada está pendente", () => {
-    const regime = baselineEntrepostoRegime();
-    const validado = {
-      ...regime,
-      conditions: regime.conditions.map((c) => ({ ...c, state: "VALIDADA" as const })),
-    };
-    const assessment = assessEntrepostoRegime(validado);
+describe("assessEntrepostoRegime — evidência e integridade", () => {
+  it("fica PRONTO só com todas VALIDADA (com evidência) e conjunto íntegro", () => {
+    const regime = { ...baselineEntrepostoRegime(), conditions: allValidated() };
+    const assessment = assessEntrepostoRegime(regime);
     expect(assessment.readiness).toBe("PRONTO");
     expect(assessment.pendingConditions).toEqual([]);
   });
 
-  it("condição NAO_APLICAVEL não conta como pendente", () => {
-    const regime = baselineEntrepostoRegime();
-    const conditions = regime.conditions.map((c, i) => {
-      const state: ValidationState = i === 0 ? "NAO_APLICAVEL" : "VALIDADA";
-      return { ...c, state };
+  it("NAO_APLICAVEL exige evidência e não é pendente", () => {
+    const conditions = allValidated();
+    conditions[0] = {
+      condition: conditions[0].condition,
+      state: "NAO_APLICAVEL",
+      detail: "não incide neste cenário",
+      evidence: EVID,
+    };
+    const assessment = assessEntrepostoRegime({
+      ...baselineEntrepostoRegime(),
+      conditions,
     });
-    const assessment = assessEntrepostoRegime({ ...regime, conditions });
     expect(assessment.readiness).toBe("PRONTO");
   });
 
+  it("INDETERMINADO quando falta uma condição canônica (nunca PRONTO)", () => {
+    const conditions = allValidated().slice(1); // remove ADMISSAO
+    const assessment = assessEntrepostoRegime({
+      ...baselineEntrepostoRegime(),
+      conditions,
+    });
+    expect(assessment.readiness).toBe("INDETERMINADO");
+    expect(assessment.integrity).toBe("CONDICAO_AUSENTE");
+  });
+
+  it("INDETERMINADO quando há condição duplicada", () => {
+    const conditions = [...allValidated(), allValidated()[0]];
+    const assessment = assessEntrepostoRegime({
+      ...baselineEntrepostoRegime(),
+      conditions,
+    });
+    expect(assessment.readiness).toBe("INDETERMINADO");
+    expect(assessment.integrity).toBe("CONDICAO_DUPLICADA");
+  });
+
   it("INDETERMINADO quando não há condições", () => {
-    const regime = baselineEntrepostoRegime();
-    expect(assessEntrepostoRegime({ ...regime, conditions: [] }).readiness).toBe(
-      "INDETERMINADO",
-    );
+    const assessment = assessEntrepostoRegime({
+      ...baselineEntrepostoRegime(),
+      conditions: [],
+    });
+    expect(assessment.readiness).toBe("INDETERMINADO");
   });
 });
