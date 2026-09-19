@@ -61,21 +61,31 @@ O detalhe completo está em [`LACUNAS-REVIEW.md`](./LACUNAS-REVIEW.md) e em
 | Dado | Estado |
 | --- | --- |
 | Armazenagem DP World Santos / Ecoporto | Tabela pública datada (confiança A) |
-| Descarga Direta "Santos Brasil" | Baseline histórico com **ressalva de Imbituba** (confiança C) |
+| Descarga Direta "Santos Brasil" | Baseline histórico, **não consolidado** e com ressalva de Imbituba (confiança C) — não gera custo real |
 | BTP | **Não consolidado** — não usado como constante |
-| Registro NCM → órgão anuente | **Vazio** — sem mapeamento inventado (Portal Único) |
+| Registro NCM → órgão anuente | **Vazio** — sem mapeamento inventado; resolução considera atributos e múltiplas entradas |
 | Disponibilidade, distância, prazo, custo/km, capital, DTA | Desconhecidos / premissas explícitas |
-| Entreposto aduaneiro | Regime **pendente de validação** (Manual RFB) |
-| Logcomex (documental, tracking, mercado) | Adapters + fallback; cliente HTTP pendente de credenciais |
+| Entreposto aduaneiro | **Regime** (não tipo de recinto), pendente de validação com evidência por condição (Manual RFB) |
+| Logcomex (documental, tracking, mercado) | Adapters/ports + fallback; **integração não ativa** (sem cliente HTTP/credenciais) |
 
 Nada acima é convertido em número inventado: valores ausentes permanecem
-desconhecidos ou premissas rotuladas.
+desconhecidos ou premissas rotuladas. Estados de informação distinguem
+`conhecido`, `desconhecido` e `não aplicável`.
 
-## Resiliência
+## Integração Logcomex
 
-As integrações Logcomex têm wrappers com **timeout e fallback offline**
-(`src/lib/logcomex/resilient.ts`): falha ou timeout retornam contexto vazio
-marcado como degradado, nunca uma falsa certeza.
+A arquitetura está **preparada para integração** (DTOs do provedor, ports e
+adapters puros, fallback offline com timeout em `src/lib/logcomex/resilient.ts`),
+mas o **Logcomex não é chamado pela demo**: não há cliente HTTP, endpoint,
+autenticação nem confirmação de moeda/locale/schema real. Falha/timeout caem em
+fallback marcado como `degraded`, com fonte `INTERNAL_FALLBACK` — nunca
+apresentado como resposta real do provedor. O CIF não é derivado em BRL enquanto
+a moeda das parcelas não for confirmada.
+
+## Integração contínua
+
+`.github/workflows/ci.yml` executa `test`, `tsc --noEmit`, `lint` e `build` em
+cada push/PR.
 
 ## Documentos do projeto
 
