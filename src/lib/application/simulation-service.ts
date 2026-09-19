@@ -22,7 +22,7 @@ import type {
   Route,
   TrackedValue,
 } from "../domain";
-import { createCostComponent, isKnown, unknownAmount } from "../domain";
+import { createCostComponent, isKnown, known, unknownAmount } from "../domain";
 import {
   assessBehavioralFactors,
   assessWindow48h,
@@ -59,11 +59,13 @@ export interface SimulationInput {
   necessitaEntrepostagem?: TrackedValue<boolean>;
   /** Componentes de custo por rota, montados pelo chamador (ETAPA 5 + tarifas). */
   routeCostComponents?: Record<string, CostComponent[]>;
-  /** Sinais comportamentais (não bloqueiam viabilidade). */
+  /**
+   * Sinais comportamentais (não bloqueiam viabilidade). A viabilidade da janela
+   * de 48h NÃO entra aqui: é derivada do `window48h` (fonte única, AJUSTE 9.4).
+   */
   behavioral?: {
     possuiCaixaParaAntecipacao?: TrackedValue<boolean>;
     possuiEstruturaSincronizada?: TrackedValue<boolean>;
-    janela48hViavel?: TrackedValue<boolean>;
   };
   /** Contexto da janela de 48h. */
   window48h?: Window48hContext;
@@ -107,6 +109,22 @@ function costComponentsForRoute(
   ];
 }
 
+/**
+ * Deriva o sinal comportamental da janela a partir do assessment (AJUSTE 9.4):
+ * fonte única. Viável => true; inviável => false; indeterminada/N-A => unknown.
+ */
+function window48hToBehavioralFlag(
+  assessment: Window48hAssessment,
+): TrackedValue<boolean> | undefined {
+  if (assessment.viability === "VIAVEL") {
+    return known(true, { origin: "USUARIO", reference: "Janela de 48h avaliada como viável" });
+  }
+  if (assessment.viability === "INVIAVEL") {
+    return known(false, { origin: "USUARIO", reference: "Janela de 48h avaliada como inviável" });
+  }
+  return undefined;
+}
+
 function dedupeEvidences(evidences: Evidence[]): Evidence[] {
   const seen = new Set<string>();
   const result: Evidence[] = [];
@@ -136,11 +154,14 @@ export function runSimulation(input: SimulationInput): SimulationResult {
     anuencia,
   });
 
-  // 3. Elegibilidade por rota.
+  // 3. Elegibilidade por rota. O status de liberação é passado como dimensão
+  //    contextual e aplicado POR MOVIMENTO da rota (AJUSTE 8.10/9.2), não como
+  //    bloqueio global.
   const eligibilityInput: EligibilityInput = {
     cargo: input.cargo,
     anuencia: anuencia.status === "RESOLVED" ? anuencia.anuencia : undefined,
     necessitaEntrepostagem: input.necessitaEntrepostagem,
+    clearanceStatus: clearance.status,
   };
   const eligibilities = evaluateEligibility(eligibilityInput, input.routes);
 
@@ -164,14 +185,17 @@ export function runSimulation(input: SimulationInput): SimulationResult {
   }));
   const comparison = compareRoutes(candidates);
 
-  // 6. Janela de 48h e fatores comportamentais.
+  // 6. Janela de 48h e fatores comportamentais. Fonte de verdade única
+  //    (AJUSTE 9.4): o fator JANELA_48H é DERIVADO do assessment da janela,
+  //    não de um booleano paralelo.
   const window48h = assessWindow48h(input.window48h ?? {});
+  const janela48hViavel = window48hToBehavioralFlag(window48h);
   const behavioralFactors = assessBehavioralFactors({
     cargo: input.cargo,
     anuencia: anuencia.status === "RESOLVED" ? anuencia.anuencia : undefined,
     possuiCaixaParaAntecipacao: input.behavioral?.possuiCaixaParaAntecipacao,
     possuiEstruturaSincronizada: input.behavioral?.possuiEstruturaSincronizada,
-    janela48hViavel: input.behavioral?.janela48hViavel,
+    janela48hViavel,
   });
 
   // 7. Evidências e dados faltantes agregados.
@@ -191,7 +215,7 @@ export function runSimulation(input: SimulationInput): SimulationResult {
   );
 
   const evidences = dedupeEvidences([
-    ...(anuencia.status === "RESOLVED" ? [anuencia.anuencia.evidence] : []),
+    ...clearance.evidence,
     ...costEvidences,
     ...window48h.evidence,
     ...behavioralFactors.map((factor) => factor.evidence),

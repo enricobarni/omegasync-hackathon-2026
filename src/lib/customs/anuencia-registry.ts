@@ -17,14 +17,17 @@ import type {
   SourceReference,
 } from "../domain";
 
-/** Fonte oficial preferida para o tratamento administrativo (FONTES §13.4). */
+/**
+ * Fonte oficial preferida para o tratamento administrativo (FONTES §13.4).
+ * É um SERVIÇO/simulador oficial, não norma jurídica, e ainda A CONSULTAR
+ * (AJUSTE 8.6): sem accessedAt/confiança fictícios.
+ */
 export const SOURCE_PORTAL_UNICO: SourceReference = {
   id: "portal-unico-siscomex-tratamento-administrativo",
-  title: "Tratamento Administrativo na Importação — Simulador",
+  title: "Tratamento Administrativo na Importação — Simulador (fonte a consultar)",
   publisher: "Portal Único Siscomex",
-  accessedAt: "2026-09-19",
-  confidence: "A",
-  kind: "OFFICIAL_REGULATION",
+  consulted: false,
+  kind: "OFFICIAL_SERVICE",
 };
 
 export interface AnuenciaRegistryEntry {

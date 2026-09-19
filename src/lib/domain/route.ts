@@ -31,6 +31,19 @@ export const CARGO_ACCEPTANCE = ["ACCEPTED", "REJECTED", "UNKNOWN"] as const;
 export type CargoAcceptance = (typeof CARGO_ACCEPTANCE)[number];
 
 /**
+ * Tipo de movimento/operação da rota (AJUSTE 9.2/9.3). Permite aplicar efeitos
+ * por rota (ex.: retirada final exige liberação; permanência/trânsito têm
+ * regras próprias) em vez de um status global.
+ */
+export const ROUTE_MOVEMENTS = [
+  "RETIRADA_DIRETA",
+  "PERMANENCIA_ZONA_PRIMARIA",
+  "TRANSITO_DTA_ZONA_SECUNDARIA",
+  "OUTRO",
+] as const;
+export type RouteMovement = (typeof ROUTE_MOVEMENTS)[number];
+
+/**
  * Estado de elegibilidade de uma rota. Contrato compartilhado; a avaliação
  * determinística pertence ao motor de elegibilidade (ETAPA 3).
  */
@@ -52,6 +65,8 @@ export type RouteEligibilityStatus = (typeof ROUTE_ELIGIBILITY_STATUSES)[number]
 export interface Route {
   id: string;
   label: string;
+  /** Tipo de movimento/operação; default OUTRO quando ausente. */
+  movement?: RouteMovement;
   origin: Facility;
   destination: Facility;
   requiresDta: DtaRequirement;

@@ -9,6 +9,7 @@ import {
   unknown,
   unknownAmount,
 } from "../domain";
+import type { ClearanceStatus } from "../domain";
 import {
   evaluateEligibility,
   evaluateRouteEligibility,
@@ -63,7 +64,7 @@ function rota(overrides: Partial<Route> = {}): Route {
     label: "Terminal → Recinto",
     origin: TERMINAL,
     destination: RECINTO_ZS,
-    requiresDta: dtaRequirementUnknown(),
+    requiresDta: { status: "NOT_REQUIRED", evidence: EVIDENCIA },
     acceptedCargoTypes: known(["FCL"], EVIDENCIA),
     availability: { status: "AVAILABLE", evidence: EVIDENCIA },
     distanceKm: known(20, EVIDENCIA),
@@ -76,6 +77,7 @@ function rota(overrides: Partial<Route> = {}): Route {
 
 const ANUENCIA_LIVRE: ResolvedAnuencia = {
   state: "SEM_ANUENCIA",
+  fulfillment: "UNKNOWN",
   organs: [],
   evidence: createEvidence("USUARIO"),
 };
@@ -103,6 +105,7 @@ describe("evaluateRouteEligibility", () => {
   it("INVIAVEL quando a anuência impede a operação", () => {
     const anuencia: ResolvedAnuencia = {
       state: "IMPEDIMENTO",
+      fulfillment: "UNKNOWN",
       organs: ["ANVISA"],
       evidence: createEvidence("USUARIO"),
     };
@@ -175,6 +178,33 @@ describe("evaluateRouteEligibility", () => {
       rota({ acceptedCargoTypes: known([], EVIDENCIA) }),
     );
     expect(result.status).toBe("INVIAVEL");
+  });
+
+  it("INDETERMINADA quando a rota exige DTA e o trânsito não foi resolvido (AJUSTE 9.1)", () => {
+    const result = evaluateRouteEligibility(
+      input(),
+      rota({ requiresDta: dtaRequirementUnknown() }),
+    );
+    expect(result.status).toBe("INDETERMINADA");
+    expect(result.reasons.some((r) => r.rule === "DTA")).toBe(true);
+  });
+
+  it("retirada direta bloqueada por liberação (AJUSTE 9.2)", () => {
+    const bloqueada: ClearanceStatus = "BLOQUEADA";
+    const result = evaluateRouteEligibility(
+      input({ clearanceStatus: bloqueada }),
+      rota({ movement: "RETIRADA_DIRETA" }),
+    );
+    expect(result.status).toBe("INVIAVEL");
+  });
+
+  it("permanência/trânsito não é bloqueada por liberação pendente (AJUSTE 8.10)", () => {
+    const pendente: ClearanceStatus = "PENDENTE";
+    const result = evaluateRouteEligibility(
+      input({ clearanceStatus: pendente }),
+      rota({ movement: "TRANSITO_DTA_ZONA_SECUNDARIA" }),
+    );
+    expect(result.status).toBe("VIAVEL");
   });
 
   it("BLOCK tem precedência sobre INDETERMINATE", () => {

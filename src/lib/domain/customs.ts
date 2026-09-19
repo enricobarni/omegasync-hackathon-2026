@@ -48,6 +48,19 @@ export const ANUENCIA_STATES = [
 ] as const;
 export type AnuenciaState = (typeof ANUENCIA_STATES)[number];
 
+/**
+ * Status de cumprimento da anuência nesta operação (AJUSTE 8.2/8.3): a
+ * modalidade (state) é distinta de ter sido efetivamente atendida. A
+ * existência de uma exigência não prova que foi descumprida.
+ */
+export const ANUENCIA_FULFILLMENTS = [
+  "SATISFIED",
+  "PENDING",
+  "NOT_SATISFIED",
+  "UNKNOWN",
+] as const;
+export type AnuenciaFulfillment = (typeof ANUENCIA_FULFILLMENTS)[number];
+
 /** Órgãos anuentes modelados (FONTES.md §13.3). */
 export const ANUENTE_ORGANS = [
   "ANVISA",
@@ -66,7 +79,10 @@ export type AnuenteOrgan = (typeof ANUENTE_ORGANS)[number];
  * oficial (Portal Único/Siscomex).
  */
 export interface ResolvedAnuencia {
+  /** Modalidade/requisito administrativo. */
   state: AnuenciaState;
+  /** Status de cumprimento nesta operação (default UNKNOWN). */
+  fulfillment: AnuenciaFulfillment;
   organs: AnuenteOrgan[];
   evidence: Evidence;
 }
@@ -101,6 +117,15 @@ export type DtaRequirement =
 export function dtaRequirementUnknown(reason?: string): DtaRequirement {
   return { status: "UNKNOWN", reason };
 }
+
+/** Status de liberação aduaneira (canal + anuência). */
+export const CLEARANCE_STATUSES = [
+  "LIBERADA",
+  "BLOQUEADA",
+  "PENDENTE",
+  "INDETERMINADA",
+] as const;
+export type ClearanceStatus = (typeof CLEARANCE_STATUSES)[number];
 
 /**
  * Recinto/estrutura como nó de uma rota. Identidade e classificação física.

@@ -66,6 +66,7 @@ describe("assessBehavioralFactors", () => {
   it("ANUENCIA presente para não automática posterior, com tendência a retroporto", () => {
     const anuencia: ResolvedAnuencia = {
       state: "NAO_AUTOMATICA_POSTERIOR",
+      fulfillment: "UNKNOWN",
       organs: ["ANVISA"],
       evidence: createEvidence("USUARIO"),
     };

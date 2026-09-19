@@ -35,7 +35,7 @@ const ROTA_VIAVEL: Route = {
   label: "Terminal → Recinto",
   origin: TERMINAL,
   destination: RECINTO,
-  requiresDta: { status: "REQUIRED", evidence: EVID },
+  requiresDta: { status: "NOT_REQUIRED", evidence: EVID },
   acceptedCargoTypes: known(["FCL"], EVID),
   availability: { status: "AVAILABLE", evidence: EVID },
   distanceKm: known(20, EVID),
@@ -45,7 +45,7 @@ const ROTA_VIAVEL: Route = {
 };
 
 const REGISTRO_LIVRE: AnuenciaRegistryEntry[] = [
-  { ncm: "84713012", state: "AUTOMATICA", organs: [], evidence: EVID },
+  { ncm: "84713012", state: "SEM_ANUENCIA", organs: [], evidence: EVID },
 ];
 
 const DP_WORLD_RATES = {
