@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-19 — após a ETAPA 6.
+Última atualização: 2026-09-19 — após a ETAPA 7.
 
 ---
 
@@ -39,6 +39,8 @@ explícitas.
 | L13 | Mínimos de armazenagem (DP World/Ecoporto) | 4 | Não documentados → `minimumValue: null` (não zero) | ABERTA | Tabelas dos terminais |
 | L14 | Fração de carga anuente em Santos; canal pós-DUIMP específico de Santos | — | Não usados como probabilidade individual | ABERTA | Estatística oficial (FONTES §24) |
 | L15 | SSE — situação não pacificada | 5 | `sseAtivo = false` por padrão; OFF → componente NOT_APPLICABLE | EM USO COMO PREMISSA | STJ/TCU/Cade (FONTES §20) |
+| L16 | Custo real da perda da janela de 48h (no-show) | 7 | Não modelado como valor; só consequência textual + evidência de campo E28/E31 (N=1), sem tarifa fictícia | ABERTA | Coleta operacional (FONTES §16) |
+| L17 | Vínculo dos inputs operacionais da janela (carga-pátio? recinto discriminado? retirada em 48h?) a dados reais | 7 | `assessWindow48h` recebe sinais rastreáveis; ausentes → INDETERMINADO, nunca assumidos | ABERTA | Agendamento/operação (FONTES §15) |
 
 ---
 
@@ -102,9 +104,25 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
 - **R15 — Orquestração pendente:** o comparador recebe candidatos já montados; a
   junção ETAPA 3 + ETAPA 5 + rota do catálogo é do serviço de simulação (ETAPA 9).
 
+### ETAPA 7 — Regra de 48h
+- **R16 — Aplicabilidade antes de viabilidade:** `assessWindow48h` decide
+  primeiro APLICAVEL/NAO_APLICAVEL/INDETERMINADO e só então avalia a viabilidade,
+  como exige o PLANEJAMENTO — a regra não é universal.
+- **R17 — Inputs operacionais dependem da aplicação:** carga-pátio, recinto
+  discriminado no agendamento e retirada dentro das 48h são sinais rastreáveis
+  fornecidos pelo contexto (ETAPA 9). Ausentes → INDETERMINADO (ver L17).
+  Relaciona-se ao fator comportamental `JANELA_48H` da ETAPA 3 (R07): a janela
+  agora tem avaliação própria, sourced, que a aplicação pode usar para alimentar
+  aquele fator.
+- **R18 — Sem tarifa de no-show:** a perda da janela expõe apenas a consequência
+  regulatória (perde status de carga-pátio) e evidência de campo E28/E31; nenhum
+  valor monetário foi inventado (ver L16, FONTES §16).
+
 ---
 
 ## 3. Histórico de atualizações
 
 - **2026-09-19 — ETAPA 6:** criação do arquivo consolidando lacunas L01–L15 e
   pontos de review R01–R15 das ETAPAS 1 a 6.
+- **2026-09-19 — ETAPA 7:** adicionadas lacunas L16–L17 (custo de no-show e
+  vínculo dos inputs da janela) e pontos de review R16–R18 (regra de 48h).
