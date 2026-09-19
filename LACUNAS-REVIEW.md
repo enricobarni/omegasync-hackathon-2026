@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-19 — após a ETAPA 14.
+Última atualização: 2026-09-19 — após a ETAPA 15.
 
 ---
 
@@ -43,6 +43,7 @@ explícitas.
 | L22 | Painel de evidências detalhado (fonte/confiança/vigência) na UI | 12 | A resposta da API expõe motivos/faltantes/tendências, mas não o array de evidências completo (DESIGN §19) | ABERTA | Estender `SimulationResponseDTO` com evidências (ETAPA 16) |
 | L23 | Resposta real do tracking (schema estruturado além de texto) | 13 | Tratado só como contexto de texto; sem derivar fato determinístico (FONTES §26) | ABERTA | Confirmar payload real do provedor |
 | L24 | Estrutura de KPIs da Análise de Embarques | 14 | Não processada: resposta preservada bruta com `structuredConfirmed: false` e ressalva (FONTES §28) | ABERTA | Confirmar resposta real do endpoint |
+| L25 | Regras detalhadas do Entreposto Aduaneiro (admissão, suspensão, DTA, recinto habilitado, movimentação, saída, nacionalização, custo, prazo) | 15 | Modeladas como condições `NAO_VALIDADA`; regime fica PENDENTE_VALIDACAO, sem inventar regra (FONTES §19) | ABERTA | Manual de Entreposto Aduaneiro/RFB |
 | L13 | Mínimos de armazenagem (DP World/Ecoporto) | 4 | Não documentados → `minimumValue: null` (não zero) | ABERTA | Tabelas dos terminais |
 | L14 | Fração de carga anuente em Santos; canal pós-DUIMP específico de Santos | — | Não usados como probabilidade individual | ABERTA | Estatística oficial (FONTES §24) |
 | L15 | SSE — situação não pacificada | 5 | `sseAtivo = false` por padrão; OFF → componente NOT_APPLICABLE | EM USO COMO PREMISSA | STJ/TCU/Cade (FONTES §20) |
@@ -211,6 +212,15 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   (§28) → resposta preservada bruta com ressalva, sem processamento automático
   (ver L24).
 
+### ETAPA 15 — Entreposto Aduaneiro
+- **R43 — Modelar só após validar:** o regime é um contrato com estado de
+  validação por condição; no baseline tudo é `NAO_VALIDADA` e a prontidão é
+  `PENDENTE_VALIDACAO`. Nenhuma regra de admissão/custo/prazo inventada (§19,
+  ver L25).
+- **R44 — Entreposto ≠ retroporto:** o assessment carrega nota explícita de que
+  entreposto não se confunde com retroporto/porto seco/recinto (FONTES §19); o
+  `FacilityType` já distingue os tipos desde a ETAPA 1.
+
 ---
 
 ## 3. Histórico de atualizações
@@ -233,3 +243,5 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   de review R39–R40 (tracking como contexto).
 - **2026-09-19 — ETAPA 14:** adicionada L24 (KPIs de embarques) e pontos de
   review R41–R42 (inteligência de mercado).
+- **2026-09-19 — ETAPA 15:** adicionada L25 (regras do entreposto) e pontos de
+  review R43–R44 (regime de entreposto aduaneiro).
