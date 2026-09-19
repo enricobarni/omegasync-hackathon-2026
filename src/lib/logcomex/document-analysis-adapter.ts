@@ -23,7 +23,6 @@ import type {
   TrackedValue,
 } from "../domain";
 import {
-  isKnown,
   knownAmount,
   known,
   unknown,
@@ -185,19 +184,16 @@ export function adaptDocumentAnalysis(
 // --- Derivações e confirmação --------------------------------------------
 
 /**
- * CIF = FOB + frete + seguro (definição Incoterms). Só é conhecido quando os
- * três componentes são conhecidos; caso contrário permanece desconhecido.
+ * CIF = FOB + frete + seguro (definição Incoterms) — porém a MOEDA das parcelas
+ * do Logcomex NÃO está confirmada (AJUSTE R33/LOG-05). Somar valores em moeda
+ * possivelmente estrangeira e tratá-los como BRL produziria falsa certeza.
+ * Portanto NÃO derivamos um CIF operacional em BRL até a moeda ser confirmada:
+ * o valor permanece desconhecido, sem inventar conversão.
  */
-export function deriveCif(enrichment: DocumentEnrichment): MonetaryAmount {
-  const { fob, freight, insurance } = enrichment;
-  if (isKnown(fob) && isKnown(freight) && isKnown(insurance)) {
-    return knownAmount(fob.value + freight.value + insurance.value, {
-      origin: "LOGCOMEX",
-      reference: "CIF = FOB + frete + seguro (Incoterms), a partir dos dados Logcomex",
-      source: enrichment.source,
-    });
-  }
-  return unknownAmount("CIF não derivável: FOB, frete ou seguro desconhecido.");
+export function deriveCif(): MonetaryAmount {
+  return unknownAmount(
+    "CIF não derivado: moeda das parcelas (FOB/frete/seguro) do Logcomex não confirmada (R33/LOG-05).",
+  );
 }
 
 export interface CargoConfirmation {
@@ -221,7 +217,7 @@ export function buildCargoFromEnrichment(
 ): Cargo {
   return {
     ncm: confirmation.confirmedNcm,
-    cif: confirmation.cif ?? deriveCif(enrichment),
+    cif: confirmation.cif ?? deriveCif(),
     cargoType: confirmation.cargoType,
     oeaStatus: confirmation.oeaStatus,
     channel: confirmation.channel,

@@ -17,7 +17,7 @@ export function fallbackSource(accessedAt: string): SourceReference {
     title: "Fallback offline (Logcomex indisponível)",
     publisher: "OmegaSync",
     accessedAt,
-    kind: "EXTERNAL_API",
+    kind: "INTERNAL_FALLBACK",
   };
 }
 
