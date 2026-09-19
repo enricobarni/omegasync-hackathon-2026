@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-19 — após a ETAPA 13.
+Última atualização: 2026-09-19 — após a ETAPA 14.
 
 ---
 
@@ -42,6 +42,7 @@ explícitas.
 | L21 | Parsing de números em locale (ex.: "1.234,56") do Logcomex | 11 | `parseNumber` não adivinha locale: string não numérica → desconhecido | ABERTA | Confirmar formato real do provedor |
 | L22 | Painel de evidências detalhado (fonte/confiança/vigência) na UI | 12 | A resposta da API expõe motivos/faltantes/tendências, mas não o array de evidências completo (DESIGN §19) | ABERTA | Estender `SimulationResponseDTO` com evidências (ETAPA 16) |
 | L23 | Resposta real do tracking (schema estruturado além de texto) | 13 | Tratado só como contexto de texto; sem derivar fato determinístico (FONTES §26) | ABERTA | Confirmar payload real do provedor |
+| L24 | Estrutura de KPIs da Análise de Embarques | 14 | Não processada: resposta preservada bruta com `structuredConfirmed: false` e ressalva (FONTES §28) | ABERTA | Confirmar resposta real do endpoint |
 | L13 | Mínimos de armazenagem (DP World/Ecoporto) | 4 | Não documentados → `minimumValue: null` (não zero) | ABERTA | Tabelas dos terminais |
 | L14 | Fração de carga anuente em Santos; canal pós-DUIMP específico de Santos | — | Não usados como probabilidade individual | ABERTA | Estatística oficial (FONTES §24) |
 | L15 | SSE — situação não pacificada | 5 | `sseAtivo = false` por padrão; OFF → componente NOT_APPLICABLE | EM USO COMO PREMISSA | STJ/TCU/Cade (FONTES §20) |
@@ -201,6 +202,15 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
 - **R40 — DTO do provedor fora do domínio + fallback:** schema de tracking em
   `src/lib/logcomex`; fallback offline mantém tudo desconhecido (ver L23).
 
+### ETAPA 14 — Inteligência de mercado
+- **R41 — Agregado ≠ carga individual:** `MarketImportAnalysis` e a análise de
+  embarques carregam `scope: "MARKET_AGGREGATE"`; o módulo `src/lib/portfolio`
+  não alimenta o motor de simulação (FONTES §27).
+- **R42 — Importações estruturadas; Embarques não:** colunas de Importações são
+  confirmadas (§27) → adapter estruturado. KPIs de Embarques não confirmados
+  (§28) → resposta preservada bruta com ressalva, sem processamento automático
+  (ver L24).
+
 ---
 
 ## 3. Histórico de atualizações
@@ -221,3 +231,5 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   pontos de review R34–R38 (frontend do diagnóstico).
 - **2026-09-19 — ETAPA 13:** adicionada L23 (schema real do tracking) e pontos
   de review R39–R40 (tracking como contexto).
+- **2026-09-19 — ETAPA 14:** adicionada L24 (KPIs de embarques) e pontos de
+  review R41–R42 (inteligência de mercado).
