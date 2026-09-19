@@ -1,0 +1,227 @@
+/* Application shell (DESIGN.md §10). */
+
+.menuButton {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 40;
+  align-items: center;
+  gap: 8px;
+  background: var(--btn);
+  color: var(--sidebar-text);
+  border: none;
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.overlay {
+  display: none;
+}
+
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--sidebar-width);
+  background: var(--sidebar);
+  color: var(--sidebar-text);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  gap: 28px;
+  z-index: 30;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--sidebar-text);
+}
+
+.brandMark {
+  color: var(--accent);
+}
+
+.brandName {
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+.brandName b {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.navLabel {
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--sidebar-muted);
+  padding: 0 8px;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  color: var(--sidebar-text);
+  text-decoration: none;
+  font-size: 14px;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.navItem:hover {
+  background: var(--sidebar-hover);
+}
+
+.navItemActive {
+  background: var(--sidebar-active);
+}
+
+.navItemDisabled {
+  color: var(--sidebar-muted);
+  cursor: default;
+}
+
+.navItemDisabled:hover {
+  background: transparent;
+}
+
+.soon {
+  margin-left: auto;
+  font-size: 9px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--sidebar-muted);
+}
+
+.footer {
+  margin-top: auto;
+  font-size: 11px;
+  color: var(--sidebar-muted);
+  padding: 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.closeButton {
+  display: none;
+}
+
+/* Workspace */
+.workspace {
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+}
+
+.header {
+  min-height: 88px;
+  margin: 0 36px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.title {
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.18;
+  margin-top: 6px;
+}
+
+.description {
+  color: var(--muted);
+  margin-top: 4px;
+  max-width: 60ch;
+}
+
+.badge {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--surface);
+  white-space: nowrap;
+}
+
+.main {
+  padding: 38px 36px 48px;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+@media (max-width: 900px) {
+  .menuButton {
+    display: inline-flex;
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0);
+  }
+
+  .sidebarOpen {
+    transform: translateX(0);
+  }
+
+  .overlayOpen {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 20, 18, 0.4);
+    z-index: 20;
+  }
+
+  .closeButton {
+    display: inline-flex;
+    align-self: flex-end;
+    background: transparent;
+    border: 1px solid var(--sidebar-hover);
+    color: var(--sidebar-text);
+    border-radius: var(--radius);
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+
+  .workspace {
+    margin-left: 0;
+  }
+
+  .header {
+    margin: 0 20px;
+    padding-top: 56px;
+  }
+
+  .main {
+    padding: 24px 20px 40px;
+  }
+}
