@@ -61,6 +61,11 @@
   color: var(--muted);
 }
 
+.fieldError {
+  color: var(--blocked);
+  font-size: 12px;
+}
+
 .input,
 .select {
   min-height: 43px;

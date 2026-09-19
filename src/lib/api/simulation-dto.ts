@@ -33,12 +33,12 @@ export interface SimulationRequestDTO {
   };
   operation?: {
     necessitaEntrepostagem?: boolean | null;
+    /** Sinal FACTUAL: a operação é de carga-pátio (retirada direta)? */
     cargoYardWithdrawal?: boolean | null;
+    /** Sinal FACTUAL: há recinto discriminado no agendamento? */
     facilityDiscriminatedInSchedule?: boolean | null;
-    withinBusinessWindow?: boolean | null;
     possuiCaixaParaAntecipacao?: boolean | null;
     possuiEstruturaSincronizada?: boolean | null;
-    janela48hViavel?: boolean | null;
   };
 }
 
@@ -49,7 +49,6 @@ export interface NormalizedSimulationRequest {
   behavioral?: {
     possuiCaixaParaAntecipacao?: TrackedValue<boolean>;
     possuiEstruturaSincronizada?: TrackedValue<boolean>;
-    janela48hViavel?: TrackedValue<boolean>;
   };
   window48h?: Window48hContext;
 }
@@ -62,13 +61,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-const USER_EVIDENCE = createEvidence("USUARIO");
+/** Evidência do usuário identificando o campo de origem (AJUSTE 10.4). */
+function userFieldEvidence(field: string) {
+  return createEvidence("USUARIO", { reference: `Informado pelo usuário: ${field}` });
+}
 
+/** Converte boolean|null|undefined em TrackedValue; ignora ausência. */
 function boolToTracked(
   value: unknown,
+  field: string,
 ): TrackedValue<boolean> | undefined {
-  return typeof value === "boolean" ? known(value, USER_EVIDENCE) : undefined;
+  return typeof value === "boolean"
+    ? known(value, userFieldEvidence(field))
+    : undefined;
 }
+
+const BOOLEAN_OPERATION_FIELDS = [
+  "necessitaEntrepostagem",
+  "cargoYardWithdrawal",
+  "facilityDiscriminatedInSchedule",
+  "possuiCaixaParaAntecipacao",
+  "possuiEstruturaSincronizada",
+] as const;
 
 /**
  * Valida e normaliza a requisição. Erros de formato retornam a lista de
@@ -110,48 +124,67 @@ export function validateSimulationRequest(body: unknown): ValidationResult {
     errors.push("cargo.cif, quando informado, deve ser um número >= 0.");
   }
 
-  if (body.operation !== undefined && !isRecord(body.operation)) {
+  const operationValid = body.operation === undefined || isRecord(body.operation);
+  if (!operationValid) {
     errors.push("operation, quando informado, deve ser um objeto.");
+  }
+
+  // AJUSTE 10.3: campos operacionais com tipo inválido são REJEITADOS, não
+  // silenciosamente convertidos em "não informado".
+  const operation = isRecord(body.operation) ? body.operation : {};
+  for (const field of BOOLEAN_OPERATION_FIELDS) {
+    const v = operation[field];
+    if (v !== undefined && v !== null && typeof v !== "boolean") {
+      errors.push(`operation.${field}, quando informado, deve ser booleano.`);
+    }
   }
 
   if (errors.length > 0) {
     return { ok: false, errors };
   }
 
-  const operation = isRecord(body.operation) ? body.operation : {};
-
   const normalizedCargo: Cargo = {
     ncm: ncm as string,
     cif:
       typeof cargo.cif === "number"
-        ? known(cargo.cif, USER_EVIDENCE)
+        ? known(cargo.cif, userFieldEvidence("cargo.cif"))
         : unknownAmount("CIF não informado."),
     cargoType: cargoType as Cargo["cargoType"],
     oeaStatus: oeaStatus as Cargo["oeaStatus"],
     channel: channel as Cargo["channel"],
   };
 
+  // A viabilidade da janela (withinBusinessWindow) NÃO é perguntada ao usuário
+  // (AJUSTE 12.4): é conclusão que o motor deveria calcular. A UI informa
+  // apenas sinais factuais; a janela fica indeterminada sem fonte operacional.
   const window48h: Window48hContext = {
-    cargoYardWithdrawal: boolToTracked(operation.cargoYardWithdrawal),
+    cargoYardWithdrawal: boolToTracked(
+      operation.cargoYardWithdrawal,
+      "operation.cargoYardWithdrawal",
+    ),
     facilityDiscriminatedInSchedule: boolToTracked(
       operation.facilityDiscriminatedInSchedule,
+      "operation.facilityDiscriminatedInSchedule",
     ),
-    withinBusinessWindow: boolToTracked(operation.withinBusinessWindow),
   };
 
   return {
     ok: true,
     value: {
       cargo: normalizedCargo,
-      necessitaEntrepostagem: boolToTracked(operation.necessitaEntrepostagem),
+      necessitaEntrepostagem: boolToTracked(
+        operation.necessitaEntrepostagem,
+        "operation.necessitaEntrepostagem",
+      ),
       behavioral: {
         possuiCaixaParaAntecipacao: boolToTracked(
           operation.possuiCaixaParaAntecipacao,
+          "operation.possuiCaixaParaAntecipacao",
         ),
         possuiEstruturaSincronizada: boolToTracked(
           operation.possuiEstruturaSincronizada,
+          "operation.possuiEstruturaSincronizada",
         ),
-        janela48hViavel: boolToTracked(operation.janela48hViavel),
       },
       window48h,
     },
@@ -159,6 +192,12 @@ export function validateSimulationRequest(body: unknown): ValidationResult {
 }
 
 // --- Contrato de resposta -------------------------------------------------
+
+/** Valor numérico rastreável no contrato público (status + valor). */
+export interface TrackedNumberDTO {
+  status: string;
+  value: number | null;
+}
 
 /** Dimensão comparável no contrato público (AJUSTE 6.1/10.1): escopo explícito. */
 export interface ComparisonDimensionDTO {
@@ -175,8 +214,17 @@ export interface SimulationResponseDTO {
   routes: Array<{
     routeId: string;
     label: string;
+    movement: string;
     eligibility: { status: string; summary: string; missingData: string[] };
-    cost: { knownSubtotal: number; total: number | null; complete: boolean };
+    cost: {
+      knownSubtotal: number;
+      total: number | null;
+      complete: boolean;
+      missingKinds: string[];
+    };
+    /** Distância e prazo — dimensões centrais do produto (AJUSTE 10.8). */
+    distanceKm: TrackedNumberDTO;
+    estimatedDurationHours: TrackedNumberDTO;
   }>;
   comparison: {
     viable: string[];
@@ -196,6 +244,13 @@ export interface SimulationResponseDTO {
   }>;
   evidences: EvidenceView[];
   missingData: string[];
+}
+
+function toTrackedNumber(value: TrackedValue<number>): TrackedNumberDTO {
+  return {
+    status: value.status,
+    value: value.status === "KNOWN" ? value.value : null,
+  };
 }
 
 function toComparisonDimension(
@@ -229,6 +284,7 @@ export function toSimulationResponse(
     routes: result.routes.map((sim) => ({
       routeId: sim.route.id,
       label: sim.route.label,
+      movement: sim.route.movement ?? "OUTRO",
       eligibility: {
         status: sim.eligibility.status,
         summary: sim.eligibility.summary,
@@ -237,8 +293,11 @@ export function toSimulationResponse(
       cost: {
         knownSubtotal: sim.cost.summary.knownSubtotal,
         total: sim.cost.summary.total,
-        complete: sim.cost.summary.complete,
+        complete: sim.cost.complete,
+        missingKinds: sim.cost.missingKinds,
       },
+      distanceKm: toTrackedNumber(sim.route.distanceKm),
+      estimatedDurationHours: toTrackedNumber(sim.route.estimatedDurationHours),
     })),
     comparison: {
       viable: result.comparison.viable,

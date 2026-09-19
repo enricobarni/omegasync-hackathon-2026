@@ -14,6 +14,13 @@ import styles from "./shell.module.css";
 export function Sidebar() {
   const [open, setOpen] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Restaura o foco ao botão que abriu o drawer ao fechar (AJUSTE 12.8).
+  function closeDrawer() {
+    setOpen(false);
+    menuButtonRef.current?.focus();
+  }
 
   useEffect(() => {
     if (!open) {
@@ -22,7 +29,7 @@ export function Sidebar() {
     closeRef.current?.focus();
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setOpen(false);
+        closeDrawer();
       }
     }
     document.addEventListener("keydown", onKey);
@@ -33,6 +40,7 @@ export function Sidebar() {
     <>
       <button
         type="button"
+        ref={menuButtonRef}
         className={styles.menuButton}
         aria-label="Abrir navegação"
         aria-expanded={open}
@@ -45,7 +53,7 @@ export function Sidebar() {
 
       <div
         className={open ? styles.overlayOpen : styles.overlay}
-        onClick={() => setOpen(false)}
+        onClick={closeDrawer}
         aria-hidden="true"
       />
 
@@ -59,7 +67,7 @@ export function Sidebar() {
           ref={closeRef}
           className={styles.closeButton}
           aria-label="Fechar navegação"
-          onClick={() => setOpen(false)}
+          onClick={closeDrawer}
         >
           <X size={16} strokeWidth={1.5} aria-hidden="true" />
         </button>

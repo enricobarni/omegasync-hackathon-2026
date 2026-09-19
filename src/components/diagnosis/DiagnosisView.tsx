@@ -20,24 +20,59 @@ function triToBool(value: TriState): boolean | undefined {
   return value === "" ? undefined : value === "true";
 }
 
+// Labels pt-BR para enums internos (AJUSTE 12.11).
+const CARGO_TYPE_LABELS: Record<string, string> = { FCL: "FCL (contêiner completo)", LCL: "LCL (carga consolidada)" };
+const OEA_LABELS: Record<string, string> = {
+  NAO_OEA: "Não OEA",
+  ESSENCIAL: "OEA Essencial",
+  QUALIFICADO: "OEA Qualificado",
+  EXCELENCIA: "OEA Excelência",
+};
+const CHANNEL_LABELS: Record<string, string> = {
+  NAO_REVELADO: "Não revelado",
+  VERDE: "Verde",
+  AMARELO: "Amarelo",
+  VERMELHO: "Vermelho",
+  CINZA: "Cinza",
+};
+
 export function DiagnosisView() {
   const [ncm, setNcm] = useState("");
   const [cargoType, setCargoType] = useState<string>(CARGO_TYPES[0]);
-  const [oeaStatus, setOeaStatus] = useState<string>(OEA_STATUSES[0]);
+  // OEA sem default: ausência de escolha não vira NAO_OEA (AJUSTE 12.3).
+  const [oeaStatus, setOeaStatus] = useState<string>("");
   const [channel, setChannel] = useState<string>(CUSTOMS_CHANNELS[0]);
   const [cif, setCif] = useState("");
 
   const [necessitaEntrepostagem, setNecessitaEntrepostagem] = useState<TriState>("");
   const [cargoYardWithdrawal, setCargoYardWithdrawal] = useState<TriState>("");
-  const [withinBusinessWindow, setWithinBusinessWindow] = useState<TriState>("");
+  const [facilityDiscriminated, setFacilityDiscriminated] = useState<TriState>("");
+  const [possuiCaixa, setPossuiCaixa] = useState<TriState>("");
   const [possuiEstruturaSincronizada, setPossuiEstrutura] = useState<TriState>("");
 
   const [uiState, setUiState] = useState<UiState>("IDLE");
   const [errors, setErrors] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<{ ncm?: string; oeaStatus?: string }>({});
   const [result, setResult] = useState<SimulationResponseDTO | null>(null);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
+
+    // Validação por campo com aria-invalid (AJUSTE 12.7).
+    const nextFieldErrors: { ncm?: string; oeaStatus?: string } = {};
+    if (!/^\d{8}$/.test(ncm)) {
+      nextFieldErrors.ncm = "NCM deve ter 8 dígitos numéricos.";
+    }
+    if (oeaStatus === "") {
+      nextFieldErrors.oeaStatus = "Selecione o status OEA.";
+    }
+    setFieldErrors(nextFieldErrors);
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setUiState("ERROR");
+      setErrors(["Corrija os campos destacados."]);
+      return;
+    }
+
     setUiState("SUBMITTING");
     setErrors([]);
 
@@ -52,7 +87,8 @@ export function DiagnosisView() {
       operation: {
         necessitaEntrepostagem: triToBool(necessitaEntrepostagem),
         cargoYardWithdrawal: triToBool(cargoYardWithdrawal),
-        withinBusinessWindow: triToBool(withinBusinessWindow),
+        facilityDiscriminatedInSchedule: triToBool(facilityDiscriminated),
+        possuiCaixaParaAntecipacao: triToBool(possuiCaixa),
         possuiEstruturaSincronizada: triToBool(possuiEstruturaSincronizada),
       },
     };
@@ -94,8 +130,15 @@ export function DiagnosisView() {
                 value={ncm}
                 onChange={(e) => setNcm(e.target.value)}
                 placeholder="84713012"
+                aria-invalid={fieldErrors.ncm ? true : undefined}
+                aria-describedby={fieldErrors.ncm ? "ncm-error" : undefined}
                 required
               />
+              {fieldErrors.ncm ? (
+                <span id="ncm-error" className={styles.fieldError} role="alert">
+                  {fieldErrors.ncm}
+                </span>
+              ) : null}
             </div>
             <div className={styles.field}>
               <label className={styles.label} htmlFor="cif">
@@ -122,7 +165,7 @@ export function DiagnosisView() {
               >
                 {CARGO_TYPES.map((t) => (
                   <option key={t} value={t}>
-                    {t}
+                    {CARGO_TYPE_LABELS[t] ?? t}
                   </option>
                 ))}
               </select>
@@ -136,13 +179,21 @@ export function DiagnosisView() {
                 className={styles.select}
                 value={oeaStatus}
                 onChange={(e) => setOeaStatus(e.target.value)}
+                aria-invalid={fieldErrors.oeaStatus ? true : undefined}
+                aria-describedby={fieldErrors.oeaStatus ? "oea-error" : undefined}
               >
+                <option value="">Selecione…</option>
                 {OEA_STATUSES.map((t) => (
                   <option key={t} value={t}>
-                    {t}
+                    {OEA_LABELS[t] ?? t}
                   </option>
                 ))}
               </select>
+              {fieldErrors.oeaStatus ? (
+                <span id="oea-error" className={styles.fieldError} role="alert">
+                  {fieldErrors.oeaStatus}
+                </span>
+              ) : null}
             </div>
             <div className={styles.field}>
               <label className={styles.label} htmlFor="channel">
@@ -156,7 +207,7 @@ export function DiagnosisView() {
               >
                 {CUSTOMS_CHANNELS.map((t) => (
                   <option key={t} value={t}>
-                    {t}
+                    {CHANNEL_LABELS[t] ?? t}
                   </option>
                 ))}
               </select>
@@ -175,15 +226,21 @@ export function DiagnosisView() {
             />
             <TriField
               id="cargaPatio"
-              label="Retirada direta em pátio?"
+              label="É operação de carga-pátio (retirada direta)?"
               value={cargoYardWithdrawal}
               onChange={setCargoYardWithdrawal}
             />
             <TriField
-              id="janela"
-              label="Retirada viável em 48h?"
-              value={withinBusinessWindow}
-              onChange={setWithinBusinessWindow}
+              id="recintoDiscriminado"
+              label="Recinto discriminado no agendamento?"
+              value={facilityDiscriminated}
+              onChange={setFacilityDiscriminated}
+            />
+            <TriField
+              id="caixa"
+              label="Possui caixa para antecipação?"
+              value={possuiCaixa}
+              onChange={setPossuiCaixa}
             />
             <TriField
               id="estrutura"
