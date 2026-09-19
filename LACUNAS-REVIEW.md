@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-19 — após a ETAPA 15.
+Última atualização: 2026-09-19 — após a ETAPA 16.
 
 ---
 
@@ -40,7 +40,7 @@ explícitas.
 | L19 | Mapeamento rota → tarifa/distância/prazo na simulação | 9 | O serviço recebe `routeCostComponents` do chamador; sem custo informado → componente UNKNOWN (total null, nunca zero) | ABERTA | Catálogo real + tarifas (ETAPAs 2/4) |
 | L20 | Cliente HTTP real do Logcomex (endpoint + credenciais) | 11 | Só a porta `DocumentAnalysisPort` + adapter puro + fallback; sem chamada de rede no núcleo, sem segredos versionados | ABERTA | Endpoint/credenciais via variável de ambiente (borda) |
 | L21 | Parsing de números em locale (ex.: "1.234,56") do Logcomex | 11 | `parseNumber` não adivinha locale: string não numérica → desconhecido | ABERTA | Confirmar formato real do provedor |
-| L22 | Painel de evidências detalhado (fonte/confiança/vigência) na UI | 12 | A resposta da API expõe motivos/faltantes/tendências, mas não o array de evidências completo (DESIGN §19) | ABERTA | Estender `SimulationResponseDTO` com evidências (ETAPA 16) |
+| L22 | Painel de evidências detalhado (fonte/confiança/vigência) na UI | 12→16 | RESOLVIDA: `SimulationResponseDTO.evidences` (origem, referência, confiança, fonte/vigência, premissa) e disclosure de Evidências na UI | RESOLVIDA | — |
 | L23 | Resposta real do tracking (schema estruturado além de texto) | 13 | Tratado só como contexto de texto; sem derivar fato determinístico (FONTES §26) | ABERTA | Confirmar payload real do provedor |
 | L24 | Estrutura de KPIs da Análise de Embarques | 14 | Não processada: resposta preservada bruta com `structuredConfirmed: false` e ressalva (FONTES §28) | ABERTA | Confirmar resposta real do endpoint |
 | L25 | Regras detalhadas do Entreposto Aduaneiro (admissão, suspensão, DTA, recinto habilitado, movimentação, saída, nacionalização, custo, prazo) | 15 | Modeladas como condições `NAO_VALIDADA`; regime fica PENDENTE_VALIDACAO, sem inventar regra (FONTES §19) | ABERTA | Manual de Entreposto Aduaneiro/RFB |
@@ -221,6 +221,15 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   entreposto não se confunde com retroporto/porto seco/recinto (FONTES §19); o
   `FacilityType` já distingue os tipos desde a ETAPA 1.
 
+### ETAPA 16 — Evidência e explicabilidade
+- **R45 — Evidências no contrato e na UI (resolve L22):** `toEvidenceView`
+  converte `Evidence` em visão com origem, referência, confiança rotulada,
+  fonte/vigência e flag de premissa; `SimulationResponseDTO.evidences` expõe
+  isso e a UI mostra um disclosure "Evidências".
+- **R46 — Agregação enriquecida:** a simulação passou a incluir a proveniência
+  dos componentes de custo conhecidos (além de anuência, janela e fatores), sem
+  duplicar evidências (dedupe por origem+referência).
+
 ---
 
 ## 3. Histórico de atualizações
@@ -245,3 +254,5 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   review R41–R42 (inteligência de mercado).
 - **2026-09-19 — ETAPA 15:** adicionada L25 (regras do entreposto) e pontos de
   review R43–R44 (regime de entreposto aduaneiro).
+- **2026-09-19 — ETAPA 16:** L22 marcada RESOLVIDA (evidências no DTO e na UI);
+  pontos de review R45–R46 (explicabilidade).
