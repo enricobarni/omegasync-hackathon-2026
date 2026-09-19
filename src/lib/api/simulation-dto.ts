@@ -18,6 +18,8 @@ import {
 } from "../domain";
 import type { Window48hContext } from "../engine";
 import type { SimulationResult } from "../application";
+import { toEvidenceViews } from "../evidence";
+import type { EvidenceView } from "../evidence";
 
 // --- Contrato de requisição ----------------------------------------------
 
@@ -181,6 +183,7 @@ export interface SimulationResponseDTO {
     present: boolean | null;
     tendency?: string;
   }>;
+  evidences: EvidenceView[];
   missingData: string[];
 }
 
@@ -232,6 +235,7 @@ export function toSimulationResponse(
       present: factor.present,
       tendency: factor.tendency,
     })),
+    evidences: toEvidenceViews(result.evidences),
     missingData: result.missingData,
   };
 }

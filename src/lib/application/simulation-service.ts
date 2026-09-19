@@ -22,7 +22,7 @@ import type {
   Route,
   TrackedValue,
 } from "../domain";
-import { createCostComponent, unknownAmount } from "../domain";
+import { createCostComponent, isKnown, unknownAmount } from "../domain";
 import {
   assessBehavioralFactors,
   assessWindow48h,
@@ -183,8 +183,16 @@ export function runSimulation(input: SimulationInput): SimulationResult {
     ]),
   );
 
+  const costEvidences = routeSimulations.flatMap((sim) =>
+    sim.cost.components
+      .map((component) => component.amount)
+      .filter(isKnown)
+      .map((amount) => amount.evidence),
+  );
+
   const evidences = dedupeEvidences([
     ...(anuencia.status === "RESOLVED" ? [anuencia.anuencia.evidence] : []),
+    ...costEvidences,
     ...window48h.evidence,
     ...behavioralFactors.map((factor) => factor.evidence),
   ]);
