@@ -90,5 +90,9 @@ describe("toSimulationResponse", () => {
     expect(dto.routes[0].cost.total).toBeNull();
     expect(Array.isArray(dto.comparison.viable)).toBe(true);
     expect(dto.window48h.applicability).toBe("INDETERMINADO");
+    // evidências expostas no contrato (ETAPA 16 / L22)
+    expect(Array.isArray(dto.evidences)).toBe(true);
+    expect(dto.evidences.length).toBeGreaterThan(0);
+    expect(dto.evidences[0].originLabel).toBeTruthy();
   });
 });
