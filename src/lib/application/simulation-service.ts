@@ -170,6 +170,7 @@ export function runSimulation(input: SimulationInput): SimulationResult {
     const cost = computeRouteCost(
       route.id,
       costComponentsForRoute(input, route),
+      route.requiredCostKinds ?? [],
     );
     return { route, eligibility: eligibilities[index], cost };
   });

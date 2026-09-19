@@ -9,7 +9,7 @@
  */
 
 import type { CargoType } from "./cargo";
-import type { CostComponent, CostSummary } from "./cost";
+import type { CostComponent, CostComponentKind, CostSummary } from "./cost";
 import { summarizeCosts } from "./cost";
 import type { Availability, DtaRequirement, Facility } from "./customs";
 import { isKnown } from "./information";
@@ -82,6 +82,11 @@ export interface Route {
   estimatedDurationHours: TrackedValue<number>;
   restrictions: RouteRestriction[];
   costComponents: CostComponent[];
+  /**
+   * Componentes de custo esperados para esta rota (AJUSTE 5.1). O custo só é
+   * "completo" quando todos foram avaliados (KNOWN ou NOT_APPLICABLE).
+   */
+  requiredCostKinds?: CostComponentKind[];
   source?: SourceReference;
 }
 

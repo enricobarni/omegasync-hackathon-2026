@@ -131,9 +131,15 @@ export function ResultPanel({ result }: { result: SimulationResponseDTO }) {
           </div>
           <div className={styles.metric}>
             <div className={styles.metricValue}>
-              {result.comparison.lowestCostRouteId ?? "—"}
+              {result.comparison.costTotal.lowestRouteIds.length > 0
+                ? result.comparison.costTotal.lowestRouteIds.join(", ")
+                : "—"}
             </div>
-            <div className={styles.metricLabel}>Menor custo (rota)</div>
+            <div className={styles.metricLabel}>
+              {result.comparison.costTotal.fullyComparable
+                ? "Menor custo total"
+                : "Menor custo (comparação parcial)"}
+            </div>
           </div>
         </div>
       </section>

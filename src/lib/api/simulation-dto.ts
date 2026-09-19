@@ -16,7 +16,7 @@ import {
   known,
   unknownAmount,
 } from "../domain";
-import type { Window48hContext } from "../engine";
+import type { ComparableDimension, Window48hContext } from "../engine";
 import type { SimulationResult } from "../application";
 import { toEvidenceViews } from "../evidence";
 import type { EvidenceView } from "../evidence";
@@ -160,6 +160,15 @@ export function validateSimulationRequest(body: unknown): ValidationResult {
 
 // --- Contrato de resposta -------------------------------------------------
 
+/** Dimensão comparável no contrato público (AJUSTE 6.1/10.1): escopo explícito. */
+export interface ComparisonDimensionDTO {
+  status: string;
+  /** Vencedor(es) — vários ids indicam empate (AJUSTE 6.3). */
+  lowestRouteIds: string[];
+  lowestValue: number | null;
+  fullyComparable: boolean;
+}
+
 export interface SimulationResponseDTO {
   clearance: { status: string; reasons: string[]; missingData: string[] };
   anuencia: { status: string; state: string | null };
@@ -173,9 +182,10 @@ export interface SimulationResponseDTO {
     viable: string[];
     indeterminate: string[];
     inviable: string[];
-    lowestCostRouteId: string | null;
-    lowestDistanceRouteId: string | null;
-    lowestDurationRouteId: string | null;
+    costTotal: ComparisonDimensionDTO;
+    costKnownSubtotal: ComparisonDimensionDTO;
+    distance: ComparisonDimensionDTO;
+    duration: ComparisonDimensionDTO;
   };
   window48h: { applicability: string; viability: string | null };
   behavioralFactors: Array<{
@@ -186,6 +196,17 @@ export interface SimulationResponseDTO {
   }>;
   evidences: EvidenceView[];
   missingData: string[];
+}
+
+function toComparisonDimension(
+  dimension: ComparableDimension,
+): ComparisonDimensionDTO {
+  return {
+    status: dimension.status,
+    lowestRouteIds: dimension.lowest?.routeIds ?? [],
+    lowestValue: dimension.lowest?.value ?? null,
+    fullyComparable: dimension.fullyComparable,
+  };
 }
 
 /** Mapeia o resultado interno para o contrato público estável. */
@@ -223,9 +244,10 @@ export function toSimulationResponse(
       viable: result.comparison.viable,
       indeterminate: result.comparison.indeterminate,
       inviable: result.comparison.inviable,
-      lowestCostRouteId: result.comparison.cost.lowest?.routeId ?? null,
-      lowestDistanceRouteId: result.comparison.distance.lowest?.routeId ?? null,
-      lowestDurationRouteId: result.comparison.duration.lowest?.routeId ?? null,
+      costTotal: toComparisonDimension(result.comparison.costTotal),
+      costKnownSubtotal: toComparisonDimension(result.comparison.costKnownSubtotal),
+      distance: toComparisonDimension(result.comparison.distance),
+      duration: toComparisonDimension(result.comparison.duration),
     },
     window48h: {
       applicability: result.window48h.applicability,

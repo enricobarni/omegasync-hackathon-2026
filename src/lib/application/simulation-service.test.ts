@@ -102,7 +102,7 @@ describe("runSimulation — rota viável com dados", () => {
     expect(result.routes[0].cost.summary.complete).toBe(true);
     expect(result.routes[0].cost.summary.total).toBe(1900);
     expect(result.comparison.viable).toEqual(["rota-viavel"]);
-    expect(result.comparison.cost.lowest).toEqual({ routeId: "rota-viavel", value: 1900 });
+    expect(result.comparison.costTotal.lowest).toEqual({ routeIds: ["rota-viavel"], value: 1900 });
     expect(result.window48h.viability).toBe("VIAVEL");
   });
 

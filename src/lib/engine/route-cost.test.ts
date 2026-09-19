@@ -148,6 +148,39 @@ describe("invariantes numéricas dos construtores (AJUSTE 5.5)", () => {
   });
 });
 
+describe("computeRouteCost — componentes esperados (AJUSTE 5.1)", () => {
+  it("conjunto vazio não é completo", () => {
+    const r = computeRouteCost("rota", []);
+    expect(r.complete).toBe(false);
+    expect(r.summary.total).toBeNull();
+  });
+
+  it("componente esperado ausente torna o custo incompleto", () => {
+    const r = computeRouteCost(
+      "rota",
+      [buildStorageComponent({ cif: 100_000, daysOfStay: 5, rates: DP_WORLD_RATES, evidence: EVID })],
+      ["ARMAZENAGEM", "DTA"],
+    );
+    expect(r.missingKinds).toContain("DTA");
+    expect(r.complete).toBe(false);
+    expect(r.summary.total).toBeNull();
+  });
+
+  it("todos os esperados avaliados (KNOWN/NOT_APPLICABLE) => completo", () => {
+    const r = computeRouteCost(
+      "rota",
+      [
+        buildStorageComponent({ cif: 100_000, daysOfStay: 5, rates: DP_WORLD_RATES, evidence: EVID }),
+        buildSseComponent({ active: false, amountWhenActive: null }),
+      ],
+      ["ARMAZENAGEM", "SSE"],
+    );
+    expect(r.missingKinds).toEqual([]);
+    expect(r.complete).toBe(true);
+    expect(r.summary.total).toBe(1900);
+  });
+});
+
 describe("computeRouteCost", () => {
   it("soma componentes conhecidos e não bloqueia com não aplicável", () => {
     const result = computeRouteCost("rota-a", [

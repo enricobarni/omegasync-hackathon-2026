@@ -21,6 +21,7 @@
 
 import type {
   CostComponent,
+  CostComponentKind,
   CostSummary,
   Evidence,
   MonetaryAmount,
@@ -160,6 +161,8 @@ export interface DirectDischargeComponentInput {
   rate: number | null;
   minimumValue: number | null;
   evidence: Evidence;
+  /** false quando a tarifa não é consolidada e não deve gerar custo (AJUSTE 5.3). */
+  consolidated?: boolean;
   label?: string;
 }
 
@@ -167,6 +170,13 @@ export function buildDirectDischargeComponent(
   input: DirectDischargeComponentInput,
 ): CostComponent {
   const label = input.label ?? "Descarga direta";
+  if (input.consolidated === false) {
+    return createCostComponent(
+      "DESCARGA",
+      label,
+      unknownAmount("Tarifa de descarga direta não consolidada."),
+    );
+  }
   const invalid =
     input.cif !== null &&
     input.rate !== null &&
@@ -286,20 +296,47 @@ export interface RouteCostResult {
   routeId: string;
   components: CostComponent[];
   summary: CostSummary;
+  /** Componentes esperados para a rota que faltam ou estão desconhecidos. */
+  missingKinds: CostComponentKind[];
+  /**
+   * Completude econômica REAL (AJUSTE 5.1): true só quando todos os componentes
+   * esperados foram avaliados (KNOWN ou NOT_APPLICABLE) e nenhum é UNKNOWN.
+   */
+  complete: boolean;
 }
 
 /**
- * Calcula o custo de uma rota a partir dos componentes montados para ela.
- * Aplica a regra estrutural do domínio: qualquer componente desconhecido
- * torna o total indeterminado (null), preservando o subtotal conhecido.
+ * Calcula o custo de uma rota. Além da regra estrutural (UNKNOWN => total null),
+ * verifica os componentes ESPERADOS da rota (AJUSTE 5.1): um componente
+ * esperado ausente ou desconhecido torna o custo incompleto e o total nulo.
  */
 export function computeRouteCost(
   routeId: string,
   components: CostComponent[],
+  requiredKinds: readonly CostComponentKind[] = [],
 ): RouteCostResult {
+  const summary = summarizeCosts(components);
+
+  // Um componente esperado é considerado avaliado quando existe como KNOWN ou
+  // NOT_APPLICABLE. Ausente ou UNKNOWN => faltante.
+  const evaluated = new Set(
+    components
+      .filter((c) => c.amount.status === "KNOWN" || c.amount.status === "NOT_APPLICABLE")
+      .map((c) => c.kind),
+  );
+  const missingKinds = requiredKinds.filter((kind) => !evaluated.has(kind));
+
+  const complete = summary.complete && missingKinds.length === 0;
+
   return {
     routeId,
     components,
-    summary: summarizeCosts(components),
+    summary: {
+      ...summary,
+      complete,
+      total: complete ? summary.knownSubtotal : null,
+    },
+    missingKinds: [...missingKinds],
+    complete,
   };
 }
