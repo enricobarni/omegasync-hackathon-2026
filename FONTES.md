@@ -1281,9 +1281,30 @@ company agents                 → OAuth 2.0 Authorization Code + PKCE (S256)
 ```
 
 Não há grant client_credentials/headless nem API key manual: o agente da empresa
-depende de um token obtido pelo fluxo interativo real de OAuth. No protótipo, o
-token (quando existir) é fornecido server-side por `LOGCOMEX_MCP_ACCESS_TOKEN` —
-nunca inventado, nunca exposto ao browser.
+depende de um token obtido pelo fluxo interativo real de OAuth. A ETAPA FINAL 3
+implementa esse fluxo (Authorization Code + PKCE) server-side; alternativamente,
+um token estático pode ser fornecido por `LOGCOMEX_MCP_ACCESS_TOKEN` — nunca
+inventado, nunca exposto ao browser.
+
+Fluxo OAuth confirmado programaticamente contra o servidor real (2026-09-20, via
+SDK oficial `@modelcontextprotocol/sdk` 1.30):
+
+```text
+discovery RFC 9728 → authorization server: https://mcp.logcomex.ai
+  authorization_endpoint: https://mcp.logcomex.ai/authorize
+  token_endpoint:         https://mcp.logcomex.ai/token
+  registration_endpoint:  https://mcp.logcomex.ai/register (DCR ativo)
+  scopes_supported:       mcp:chat:free mcp:chat:agents offline_access
+  code_challenge_methods_supported: S256
+Dynamic Client Registration → client_id emitido (cliente público, sem secret)
+authorization URL construída com PKCE S256 + state validável
+```
+
+Exercitado sem intervenção humana: discovery, DCR, PKCE e a URL de autorização.
+NÃO exercitado nesta rodada por exigir sessão humana: o login/consentimento
+interativo na Logcomex e a troca `code` → `access_token`/`refresh_token`
+(dependem de um usuário real autenticar no provedor). O código está pronto para
+completá-los assim que um login real ocorrer.
 
 Formato das respostas (confirmado):
 

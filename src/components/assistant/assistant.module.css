@@ -99,6 +99,111 @@
   background: var(--selected);
 }
 
+/* Barra de conexão Logcomex (agente público × agente da empresa) */
+.connbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.connInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.connLabel {
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.connAgent {
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.connBadge {
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+
+.connConnect {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.connConnect:hover {
+  background: var(--selected);
+}
+
+.connLogout {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: var(--radius);
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.connLogout:hover {
+  background: var(--selected);
+}
+
+.connLogout:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.connOk,
+.connErr {
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.connOk {
+  color: var(--accent);
+  background: var(--selected);
+}
+
+.connErr {
+  color: var(--pending);
+  background: #f7f2ea;
+}
+
 /* Lista de mensagens */
 .messages {
   flex: 1;

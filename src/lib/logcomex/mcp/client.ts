@@ -18,6 +18,7 @@
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type { OAuthClientProvider } from "@modelcontextprotocol/sdk/client/auth.js";
 
 import type { LogcomexMcpConfig } from "./config";
 import type { McpToolDescriptor } from "./types";
@@ -71,16 +72,29 @@ export class LogcomexMcpClient {
   private client: Client | null = null;
   private transport: StreamableHTTPClientTransport | null = null;
 
-  constructor(private readonly config: LogcomexMcpConfig) {}
+  /**
+   * @param config  Configuração da borda MCP.
+   * @param authProvider  Provedor OAuth (agente da empresa). Quando presente, o
+   *   transporte gerencia o Bearer e a renovação de token via refresh_token
+   *   (ETAPA FINAL 3, §14). Sem ele, cai no `config.accessToken` (token estático
+   *   opcional) ou no agente público.
+   */
+  constructor(
+    private readonly config: LogcomexMcpConfig,
+    private readonly authProvider?: OAuthClientProvider,
+  ) {}
 
   /** Conecta e executa o handshake `initialize`. */
   async connect(): Promise<void> {
+    // Com authProvider, o próprio transporte injeta o Authorization e renova o
+    // token quando expira; não montamos header manual nesse caso.
     const headers: Record<string, string> = {};
-    if (this.config.accessToken) {
+    if (!this.authProvider && this.config.accessToken) {
       headers.Authorization = `Bearer ${this.config.accessToken}`;
     }
 
     this.transport = new StreamableHTTPClientTransport(new URL(this.config.url), {
+      authProvider: this.authProvider,
       requestInit: Object.keys(headers).length > 0 ? { headers } : undefined,
     });
     this.client = new Client(

@@ -9,6 +9,8 @@ const config: LogcomexMcpConfig = {
   requestTimeoutMs: 1_000,
   pollIntervalMs: 1,
   pollTimeoutMs: 100,
+  preferredAgentName: "Agente PortoHackSantos26-GP07",
+  oauthScope: "mcp:chat:free mcp:chat:agents offline_access",
 };
 
 /** Cliente falso: responde por nome de tool a partir de uma fila/handler. */
