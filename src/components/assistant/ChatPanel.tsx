@@ -27,6 +27,11 @@ export function ChatPanel({ simulation }: ChatPanelProps) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastQuestion, setLastQuestion] = useState<string | null>(null);
+  // Continuidade de conversa: preservado entre mensagens da sessão (não após
+  // refresh). Nunca guarda token — apenas o id de conversa devolvido pela API.
+  const [conversationId, setConversationId] = useState<string | undefined>(
+    undefined,
+  );
 
   const openButtonRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -64,7 +69,11 @@ export function ChatPanel({ simulation }: ChatPanelProps) {
       const response = await fetch("/api/assistant/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message: question, simulation }),
+        body: JSON.stringify({
+          message: question,
+          simulation,
+          ...(conversationId ? { conversationId } : {}),
+        }),
       });
       const data = (await response.json()) as ChatResponse | { errors?: string[] };
       if (!response.ok || !("answer" in data)) {
@@ -74,6 +83,11 @@ export function ChatPanel({ simulation }: ChatPanelProps) {
             : "Não foi possível consultar o assistente.";
         setError(errs);
         return;
+      }
+      // Preserva o id de conversa para manter contexto no follow-up. Só
+      // sobrescreve quando a resposta traz um id (fallback degradado não traz).
+      if (data.conversationId) {
+        setConversationId(data.conversationId);
       }
       setItems((prev) => [
         ...prev,

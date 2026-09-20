@@ -51,6 +51,46 @@ describe("handleChat — caminho feliz", () => {
   });
 });
 
+describe("handleChat — continuidade de conversa (conversationId)", () => {
+  it("propaga o conversationId da resposta OK", async () => {
+    const response = await handleChat(
+      { message: "primeira" },
+      portReturning(
+        publicReply({
+          status: "COMPLETED",
+          reply: "resposta",
+          conversationId: "conv-42",
+        }),
+      ),
+    );
+    expect(response.conversationId).toBe("conv-42");
+  });
+
+  it("preserva o conversationId mesmo quando não há resultado", async () => {
+    const response = await handleChat(
+      { message: "segunda", conversationId: "conv-42" },
+      portReturning(
+        publicReply({
+          status: "COMPLETED",
+          reply: null,
+          conversationId: "conv-42",
+        }),
+      ),
+    );
+    expect(response.status).toBe("NO_RESULTS");
+    expect(response.conversationId).toBe("conv-42");
+  });
+
+  it("resposta degradada não inventa conversationId", async () => {
+    const response = await handleChat(
+      { message: "terceira", conversationId: "conv-42" },
+      portThrowing(new LogcomexMcpError("UNAVAILABLE", "off")),
+    );
+    expect(response.degraded).toBe(true);
+    expect(response.conversationId).toBeUndefined();
+  });
+});
+
 describe("handleChat — sem resultado", () => {
   it("distingue NO_RESULTS de indisponibilidade", async () => {
     const response = await handleChat(
