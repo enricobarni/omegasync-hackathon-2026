@@ -36,9 +36,11 @@ function readLogcomexFlag(): "connected" | "error" | null {
  * o MCP diretamente — fala apenas com POST /api/assistant/chat.
  */
 export function ChatPanel({ simulation }: ChatPanelProps) {
-  // Abre o painel automaticamente quando voltamos do fluxo OAuth (initializer
-  // lazy: evita setState síncrono em efeito).
-  const [open, setOpen] = useState(() => readLogcomexFlag() !== null);
+  // Estado inicial DETERMINÍSTICO (igual no SSR e no primeiro render do cliente):
+  // nunca depende de window/URL aqui, para não causar mismatch de hidratação. O
+  // retorno do OAuth (?logcomex=...) é lido só após o mount (useEffect abaixo),
+  // que então abre o painel e mostra o aviso.
+  const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [items, setItems] = useState<ChatItem[]>([]);
   const [pending, setPending] = useState(false);
@@ -52,8 +54,9 @@ export function ChatPanel({ simulation }: ChatPanelProps) {
   // Conexão Logcomex (agente da empresa via OAuth). O componente só conhece
   // `{ authenticated, agentName }` — o token vive server-side.
   const [connection, setConnection] = useState<ConnectionState | null>(null);
+  // Também determinístico: preenchido após o mount ao ler ?logcomex.
   const [connNotice, setConnNotice] = useState<"connected" | "error" | null>(
-    () => readLogcomexFlag(),
+    null,
   );
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -86,11 +89,15 @@ export function ChatPanel({ simulation }: ChatPanelProps) {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
   }, [items, pending]);
 
-  // Após montar, limpa o parâmetro ?logcomex da URL (efeito colateral, sem
-  // setState) e consulta o status de conexão atual (setState só após o await).
+  // Só após o mount (nunca no render): lê o retorno do OAuth (?logcomex=...),
+  // limpa a URL e consulta o status. Como o estado inicial é determinístico, o
+  // primeiro render do cliente é idêntico ao SSR — sem hydration mismatch. Todos
+  // os setState ocorrem APÓS o await (nunca de forma síncrona no efeito).
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("logcomex")) {
+    const flag = readLogcomexFlag();
+    if (flag) {
+      // Limpa o parâmetro da URL (efeito colateral; não é setState).
+      const params = new URLSearchParams(window.location.search);
       params.delete("logcomex");
       const query = params.toString();
       window.history.replaceState(
@@ -102,22 +109,30 @@ export function ChatPanel({ simulation }: ChatPanelProps) {
 
     let cancelled = false;
     void (async () => {
+      let next: ConnectionState | null = null;
       try {
         const response = await fetch("/api/logcomex/auth/status", {
           cache: "no-store",
         });
-        if (!response.ok || cancelled) {
-          return;
-        }
-        const data = (await response.json()) as ConnectionState;
-        if (!cancelled) {
-          setConnection({
+        if (response.ok) {
+          const data = (await response.json()) as ConnectionState;
+          next = {
             authenticated: Boolean(data.authenticated),
             agentName: data.agentName ?? null,
-          });
+          };
         }
       } catch {
-        // Status indisponível: mantém o estado (fallback público continua).
+        // Status indisponível: mantém o fallback público.
+      }
+      if (cancelled) {
+        return;
+      }
+      if (next) {
+        setConnection(next);
+      }
+      if (flag) {
+        setConnNotice(flag);
+        setOpen(true);
       }
     })();
     return () => {
