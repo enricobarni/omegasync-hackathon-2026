@@ -15,6 +15,21 @@
 
 export const DEFAULT_LOGCOMEX_MCP_URL = "https://mcp.logcomex.ai/";
 
+/**
+ * Agente da empresa esperado para a OMEGASYNC (FONTES.md §34 / PLANEJAMENTO-
+ * FINALIZACAO §6/§13). É selecionado EXPLICITAMENTE por nome após `list_agents`
+ * — nunca "o primeiro agente" cegamente. Configurável por ambiente.
+ */
+export const DEFAULT_LOGCOMEX_AGENT_NAME = "Agente PortoHackSantos26-GP07";
+
+/**
+ * Escopo OAuth documentado e confirmado pela discovery real (FONTES.md §34).
+ * A discovery/metadata do servidor ainda tem precedência (SEP-835); este é
+ * apenas o fallback configurável — não um endpoint/escopo inventado.
+ */
+export const DEFAULT_LOGCOMEX_OAUTH_SCOPE =
+  "mcp:chat:free mcp:chat:agents offline_access";
+
 export interface LogcomexMcpConfig {
   /** URL do servidor MCP (o endpoint entregue pela plataforma). */
   url: string;
@@ -32,6 +47,14 @@ export interface LogcomexMcpConfig {
   accessToken?: string;
   /** ID do agente da empresa a preferir (opcional; descoberto via list_agents). */
   preferredAgentId?: string;
+  /**
+   * Nome do agente da empresa a selecionar explicitamente após `list_agents`
+   * (PLANEJAMENTO-FINALIZACAO §13). Sem correspondência → fallback público, nunca
+   * escolher outro agente silenciosamente.
+   */
+  preferredAgentName: string;
+  /** Escopo OAuth solicitado (fallback à discovery do servidor). */
+  oauthScope: string;
 }
 
 function readInt(name: string, fallback: number): number {
@@ -57,6 +80,9 @@ export function loadLogcomexMcpConfig(): LogcomexMcpConfig {
     pollTimeoutMs: readInt("LOGCOMEX_MCP_POLL_TIMEOUT_MS", 120_000),
     accessToken: readString("LOGCOMEX_MCP_ACCESS_TOKEN"),
     preferredAgentId: readString("LOGCOMEX_MCP_AGENT_ID"),
+    preferredAgentName:
+      readString("LOGCOMEX_MCP_AGENT_NAME") ?? DEFAULT_LOGCOMEX_AGENT_NAME,
+    oauthScope: readString("LOGCOMEX_OAUTH_SCOPE") ?? DEFAULT_LOGCOMEX_OAUTH_SCOPE,
   };
 }
 
