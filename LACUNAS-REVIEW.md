@@ -341,3 +341,9 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   pontos de review R45–R46 (explicabilidade).
 - **2026-09-19 — ETAPA 17:** pontos de review R47–R49 (resiliência, estados
   vazios, documentação); roadmap do PLANEJAMENTO.md concluído.
+- **2026-09-19 — Rodada final de correções (CORRECAO.md):** aplicadas as
+  FASES 1–7 no que é implementável sem inventar dado/fonte nem depender de
+  contrato externo. Ver a seção "0. Rodada final de correções" para o detalhe e
+  os estados. Itens ainda em aberto: E2E de browser (requer runner/dependência a
+  autorizar) e o backlog Logcomex bloqueado por contrato/credenciais do provedor
+  (grupos C/D) — por isso `CORRECAO.md` é mantido.
