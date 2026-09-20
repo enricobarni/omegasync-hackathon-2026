@@ -1303,6 +1303,13 @@ resposta genérica sobre órgão anuente/LPCO NÃO altera o motor
   → o motor permanece UNKNOWN/INDETERMINADO
 ```
 
+Continuidade de conversa (confirmado 2026-09-20): o agente PÚBLICO (`chat_free`)
+**rejeita o reuso do próprio `conversation_id`** — mesmo dentro da mesma sessão
+MCP —, retornando `403 ANONYMOUS_CONVERSATION_FORBIDDEN` ("Conversa anônima
+inválida para esta sessão."). Portanto NÃO há continuidade de follow-up no agente
+público; cada mensagem inicia uma conversa nova. A continuidade real depende do
+agente da EMPRESA autenticado (a ser exercitado na etapa de OAuth).
+
 Provenance para o código: `EXTERNAL_API`, publisher Logcomex, confiança não
 elevada (texto consultivo). Só há evidência estruturada quando o agente da
 empresa for exercitado e devolver `structuredContent` validável por schema — o

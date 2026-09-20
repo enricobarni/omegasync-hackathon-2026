@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-20 — integração MCP Logcomex (chat consultivo).
+Última atualização: 2026-09-20 — ETAPA FINAL 1 (continuidade do chat).
 
 ---
 
@@ -135,6 +135,31 @@ contrato inalterados. Nota de SDK: o plano citou `@modelcontextprotocol/client`
 Não implementado nesta rodada (fora do escopo do chat): análise documental via
 MCP, tracking via MCP, tratamento administrativo estruturado, Agent API HTTP,
 persistência de conversa, streaming.
+
+---
+
+## 0.2. ETAPA FINAL 1 — Continuidade do chat (2026-09-20)
+
+Referência: `PLANEJAMENTO-FINALIZACAO.md §4`. Branch `fix/assistant-conversation`.
+
+Implementado: o `ChatPanel` passou a preservar `conversationId` entre mensagens
+da sessão (estado no cliente; sem persistência após refresh; nunca guarda token).
+O request inclui `conversationId` e a resposta atualiza o estado quando vem um id.
+O contrato interno e a API já suportavam o campo; o serviço propaga o id quando
+presente e não o inventa em resposta degradada (coberto por teste).
+
+**Divergência confirmada (registrada, sem improviso):** contrário à premissa do
+plano, o agente PÚBLICO `chat_free` **rejeita o reuso do próprio
+`conversation_id`** (`403 ANONYMOUS_CONVERSATION_FORBIDDEN`), mesmo na mesma
+sessão MCP. Um follow-up ingênuo reenviando o id quebraria o chat público. Para
+respeitar a DoD ("chat_free continua funcionando", sem regressão) **sem alterar
+arquitetura nem contrato**, o adapter NÃO reenvia `conversation_id` ao agente
+público — cada mensagem pública inicia conversa nova. A plumbing completa de
+`conversationId` fica pronta para o agente da EMPRESA autenticado, onde a
+continuidade real deve funcionar (a validar na ETAPA FINAL 3 — OAuth).
+
+Consequência: continuidade de follow-up **não está disponível no agente público**
+(limitação do provedor). Não é uma falha do OmegaSync. Ver `FONTES.md §34`.
 
 ---
 
@@ -403,3 +428,7 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   `ChatPanel`. Endpoint e tools reais confirmados; agente público sem auth;
   agente da empresa via OAuth. Ver seção "0.1". L20 MITIGADA (via MCP); L11/L18/
   L23 seguem ABERTAS (só texto livre, sem fonte estruturada).
+- **2026-09-20 — ETAPA FINAL 1 (continuidade do chat):** `ChatPanel` preserva
+  `conversationId` na sessão. Divergência confirmada: `chat_free` rejeita reuso
+  do `conversation_id` (403 ANONYMOUS_CONVERSATION_FORBIDDEN); continuidade real
+  fica para o agente da empresa (OAuth). Ver seção "0.2" e `FONTES.md §34`.
