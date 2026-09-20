@@ -55,7 +55,13 @@ async function askViaConnection(
       }
     }
 
-    const reply = await service.askPublicAgent(prompt, conversationId);
+    // Divergência confirmada no MCP real (2026-09-20): o agente PÚBLICO
+    // (chat_free) rejeita o reuso do próprio conversation_id
+    // (403 ANONYMOUS_CONVERSATION_FORBIDDEN), mesmo na mesma sessão MCP. Logo,
+    // NÃO reenviamos o conversationId ao agente público — cada mensagem inicia
+    // uma conversa nova (sem regressão). A continuidade real depende do agente
+    // da EMPRESA autenticado (a porta acima repassa o conversationId a ele).
+    const reply = await service.askPublicAgent(prompt);
     return { source: "LOGCOMEX_PUBLIC_AGENT", reply };
   } finally {
     await client.close();
