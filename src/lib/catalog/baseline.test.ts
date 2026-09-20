@@ -4,6 +4,7 @@ import {
   DEMO_CATALOG,
   OPERATIONAL_CATALOG,
   ROTA_MODELO_PRIMARIA_SECUNDARIA,
+  ROTA_RETIRADA_DIRETA,
 } from "./baseline";
 import {
   listFacilitiesByZone,
@@ -75,5 +76,36 @@ describe("rota-modelo Zona Primária → Zona Secundária", () => {
 
   it("mantém a fonte da rota", () => {
     expect(rota.source?.id).toBe("mentoria-zona-primaria-secundaria");
+  });
+
+  it("expõe o movimento de trânsito via DTA", () => {
+    expect(rota.movement).toBe("TRANSITO_DTA_ZONA_SECUNDARIA");
+  });
+});
+
+describe("rota-modelo de retirada direta (segunda alternativa da demo)", () => {
+  const rota = ROTA_RETIRADA_DIRETA;
+
+  it("é uma premissa de simulação, sem inventar números", () => {
+    expect(rota.movement).toBe("RETIRADA_DIRETA");
+    expect(rota.availability.status).toBe("UNKNOWN");
+    expect(rota.distanceKm.status).toBe("UNKNOWN");
+    expect(rota.estimatedDurationHours.status).toBe("UNKNOWN");
+    expect(isKnown(rota.acceptedCargoTypes)).toBe(false);
+    expect(rota.costComponents).toEqual([]);
+  });
+
+  it("não exige DTA e marca isso como premissa rastreável", () => {
+    expect(rota.requiresDta.status).toBe("NOT_REQUIRED");
+    if (rota.requiresDta.status === "NOT_REQUIRED") {
+      expect(rota.requiresDta.evidence.origin).toBe("PREMISSA_SIMULACAO");
+    }
+  });
+
+  it("entra no catálogo de demonstração como segunda rota", () => {
+    expect(DEMO_CATALOG.routes.map((r) => r.id)).toContain(
+      "dpworld-santos__retirada-direta",
+    );
+    expect(DEMO_CATALOG.routes.length).toBeGreaterThanOrEqual(2);
   });
 });
