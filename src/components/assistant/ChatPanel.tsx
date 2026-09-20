@@ -94,8 +94,7 @@ export function ChatPanel({ simulation }: ChatPanelProps) {
     }
   }
 
-  function onSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  function submit() {
     const question = input.trim();
     if (question === "" || pending) {
       return;
@@ -202,7 +201,9 @@ export function ChatPanel({ simulation }: ChatPanelProps) {
           ) : null}
         </div>
 
-        <form className={styles.composer} onSubmit={onSubmit}>
+        {/* Não usar <form> aqui: o painel é renderizado dentro do formulário de
+            diagnóstico e <form> aninhado é HTML inválido (erro de hidratação). */}
+        <div className={styles.composer}>
           <label htmlFor="assistant-input" className="sr-only">
             Mensagem para o assistente
           </label>
@@ -214,7 +215,8 @@ export function ChatPanel({ simulation }: ChatPanelProps) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
-                onSubmit(e);
+                e.preventDefault();
+                submit();
               }
             }}
             placeholder="Escreva sua pergunta…"
@@ -222,14 +224,15 @@ export function ChatPanel({ simulation }: ChatPanelProps) {
             maxLength={2000}
           />
           <button
-            type="submit"
+            type="button"
             className={styles.sendButton}
             disabled={pending || input.trim() === ""}
+            onClick={submit}
             aria-label="Enviar mensagem"
           >
             <SendHorizontal size={16} strokeWidth={1.6} aria-hidden="true" />
           </button>
-        </form>
+        </div>
       </aside>
     </>
   );
