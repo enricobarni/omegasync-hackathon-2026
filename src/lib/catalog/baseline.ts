@@ -31,6 +31,7 @@ import { SOURCE_DTA_MANUAL, SOURCE_MENTORIA_ZONAS } from "./sources";
 export const ROTA_MODELO_PRIMARIA_SECUNDARIA: Route = {
   id: "dpworld-santos__recinto-zs-generico__dta",
   label: "DP World Santos → Recinto de Zona Secundária (via DTA)",
+  movement: "TRANSITO_DTA_ZONA_SECUNDARIA",
   origin: DP_WORLD_SANTOS,
   destination: RECINTO_ZS_GENERICO,
   requiresDta: {
@@ -45,6 +46,40 @@ export const ROTA_MODELO_PRIMARIA_SECUNDARIA: Route = {
   acceptedCargoTypes: unknown("Tipos de carga aceitos não coletados para esta rota"),
   availability: availabilityUnknown(
     "Disponibilidade do recinto de Zona Secundária não informada (sem fonte)",
+  ),
+  distanceKm: unknown("Distância não coletada para esta rota"),
+  estimatedDurationHours: unknown("Prazo não coletado para esta rota"),
+  restrictions: [],
+  costComponents: [],
+  source: SOURCE_MENTORIA_ZONAS,
+};
+
+/**
+ * Rota-modelo de RETIRADA DIRETA na própria Zona Primária (sem transferência
+ * entre recintos). Serve para contrastar, na demo, dois movimentos conceituais:
+ * retirada direta (sem DTA, mas dependente de liberação) × transferência via
+ * DTA para a Zona Secundária. É uma PREMISSA_SIMULACAO: a existência conceitual
+ * do movimento é sustentada, mas nenhum número operacional é inventado —
+ * disponibilidade, distância, prazo, tipos de carga e custos ficam desconhecidos.
+ */
+export const ROTA_RETIRADA_DIRETA: Route = {
+  id: "dpworld-santos__retirada-direta",
+  label: "DP World Santos → Retirada direta (Zona Primária)",
+  movement: "RETIRADA_DIRETA",
+  origin: DP_WORLD_SANTOS,
+  destination: DP_WORLD_SANTOS,
+  requiresDta: {
+    status: "NOT_REQUIRED",
+    evidence: createEvidence("PREMISSA_SIMULACAO", {
+      reference:
+        "Retirada direta no próprio terminal de Zona Primária não usa trânsito aduaneiro (DTA) — premissa conceitual da demo",
+      confidence: "C",
+      source: SOURCE_MENTORIA_ZONAS,
+    }),
+  },
+  acceptedCargoTypes: unknown("Tipos de carga aceitos não coletados para esta rota"),
+  availability: availabilityUnknown(
+    "Disponibilidade da retirada direta não informada (sem fonte)",
   ),
   distanceKm: unknown("Distância não coletada para esta rota"),
   estimatedDurationHours: unknown("Prazo não coletado para esta rota"),
@@ -70,5 +105,5 @@ export const OPERATIONAL_CATALOG: Catalog = createCatalog(
  */
 export const DEMO_CATALOG: Catalog = createCatalog(
   [...OPERATIONAL_FACILITIES, ...SIMULATION_FACILITIES],
-  [ROTA_MODELO_PRIMARIA_SECUNDARIA],
+  [ROTA_RETIRADA_DIRETA, ROTA_MODELO_PRIMARIA_SECUNDARIA],
 );

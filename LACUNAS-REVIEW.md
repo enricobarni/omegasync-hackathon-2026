@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-20 — ETAPA FINAL 1 (continuidade do chat).
+Última atualização: 2026-09-20 — ETAPA FINAL 2 (Diagnóstico como núcleo da demo).
 
 ---
 
@@ -160,6 +160,34 @@ continuidade real deve funcionar (a validar na ETAPA FINAL 3 — OAuth).
 
 Consequência: continuidade de follow-up **não está disponível no agente público**
 (limitação do provedor). Não é uma falha do OmegaSync. Ver `FONTES.md §34`.
+
+---
+
+## 0.3. ETAPA FINAL 2 — Diagnóstico como núcleo da demo (2026-09-20)
+
+Referência: `PLANEJAMENTO-FINALIZACAO.md §5`. Branch `feat/prototype-diagnosis`.
+
+Implementado, sem inventar fato/fonte:
+
+- **Segunda rota conceitual** no `DEMO_CATALOG`: `ROTA_RETIRADA_DIRETA`
+  (movimento `RETIRADA_DIRETA`, DTA `NOT_REQUIRED`), marcada explicitamente como
+  `PREMISSA_SIMULACAO`. Disponibilidade, distância, prazo, tipos de carga e
+  custos permanecem `UNKNOWN` (nenhum número fabricado). Contrasta com a
+  rota-modelo `TRANSITO_DTA_ZONA_SECUNDARIA` (DTA `REQUIRED`).
+- **Contrato/UI**: o DTO passou a expor `requiresDta` e `availability` por rota;
+  o `ResultPanel` agora mostra movimento, DTA, disponibilidade, distância, prazo
+  e custos faltantes, além de comparação por custo/subtotal/distância/duração
+  (com marcação de comparação parcial).
+- **Janela de 48h**: mantida `INDETERMINADO` quando aplicável e sem sinal
+  operacional; a UI explica o que falta em vez de fabricar conclusão (§5.2).
+
+Verificação manual (HTTP real, `next start`): duas rotas retornadas,
+`INDETERMINADA` para ambas (DTA `REQUIRED` não vira `VIAVEL`; disponibilidade
+`UNKNOWN` ≠ indisponível; custo total `null` ≠ R$ 0); assistente explicou a
+indeterminação usando o resultado como contexto (`source` público, `OK`).
+
+Sem novas lacunas: as ausências (distância/prazo/custo/disponibilidade/anuência)
+seguem as lacunas L03–L19 já registradas, agora apenas mais visíveis na UI.
 
 ---
 
@@ -432,3 +460,7 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   `conversationId` na sessão. Divergência confirmada: `chat_free` rejeita reuso
   do `conversation_id` (403 ANONYMOUS_CONVERSATION_FORBIDDEN); continuidade real
   fica para o agente da empresa (OAuth). Ver seção "0.2" e `FONTES.md §34`.
+- **2026-09-20 — ETAPA FINAL 2 (Diagnóstico como núcleo da demo):** segunda rota
+  conceitual (retirada direta, PREMISSA_SIMULACAO); DTA e disponibilidade
+  expostos no DTO e na UI; comparação e janela de 48h com explicação honesta.
+  Ver seção "0.3".

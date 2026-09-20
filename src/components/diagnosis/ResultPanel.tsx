@@ -1,14 +1,20 @@
 import { CheckCircle2, CircleHelp, XCircle } from "lucide-react";
 
-import type { SimulationResponseDTO } from "@/lib/api";
+import type { ComparisonDimensionDTO, SimulationResponseDTO } from "@/lib/api";
 import {
   anuenciaLabel,
   applicabilityLabel,
+  availabilityLabel,
   clearanceLabel,
+  costKindLabel,
+  dtaLabel,
   eligibilityLabel,
   formatCostTotal,
+  formatTrackedDistanceKm,
+  formatTrackedDurationHours,
   behavioralStateLabel,
   formatKnownSubtotal,
+  movementLabel,
   windowLabel,
 } from "@/lib/ui/format";
 import styles from "./diagnosis.module.css";
@@ -48,6 +54,23 @@ function clearanceKind(status: string): "ok" | "blocked" | "pending" {
 }
 
 export function ResultPanel({ result }: { result: SimulationResponseDTO }) {
+  const labelById = new Map(result.routes.map((r) => [r.routeId, r.label]));
+
+  function dimSummary(dimension: ComparisonDimensionDTO): string {
+    if (dimension.lowestRouteIds.length === 0) {
+      return "não comparável";
+    }
+    const winners = dimension.lowestRouteIds
+      .map((id) => labelById.get(id) ?? id)
+      .join(", ");
+    return dimension.fullyComparable ? winners : `${winners} (comparação parcial)`;
+  }
+
+  const window48hNeedsExecInfo =
+    result.window48h.applicability === "APLICAVEL" &&
+    (result.window48h.viability === null ||
+      result.window48h.viability === "INDETERMINADO");
+
   return (
     <div>
       <section className={styles.resultBlock}>
@@ -88,6 +111,34 @@ export function ResultPanel({ result }: { result: SimulationResponseDTO }) {
               />
             </div>
             <p className={styles.routeSummary}>{route.eligibility.summary}</p>
+            <dl className={styles.metaGrid}>
+              <div className={styles.metaItem}>
+                <dt className={styles.metaTerm}>Movimento</dt>
+                <dd className={styles.metaVal}>{movementLabel(route.movement)}</dd>
+              </div>
+              <div className={styles.metaItem}>
+                <dt className={styles.metaTerm}>DTA</dt>
+                <dd className={styles.metaVal}>{dtaLabel(route.requiresDta.status)}</dd>
+              </div>
+              <div className={styles.metaItem}>
+                <dt className={styles.metaTerm}>Disponibilidade</dt>
+                <dd className={styles.metaVal}>
+                  {availabilityLabel(route.availability.status)}
+                </dd>
+              </div>
+              <div className={styles.metaItem}>
+                <dt className={styles.metaTerm}>Distância</dt>
+                <dd className={styles.metaVal}>
+                  {formatTrackedDistanceKm(route.distanceKm)}
+                </dd>
+              </div>
+              <div className={styles.metaItem}>
+                <dt className={styles.metaTerm}>Prazo</dt>
+                <dd className={styles.metaVal}>
+                  {formatTrackedDurationHours(route.estimatedDurationHours)}
+                </dd>
+              </div>
+            </dl>
             <div className={styles.costRow}>
               <span className={styles.costLabel}>Subtotal conhecido</span>
               <span>
@@ -98,6 +149,12 @@ export function ResultPanel({ result }: { result: SimulationResponseDTO }) {
               <span className={styles.costLabel}>Custo total</span>
               <span>{formatCostTotal(route.cost.total)}</span>
             </div>
+            {route.cost.missingKinds.length > 0 ? (
+              <div className={styles.costRow}>
+                <span className={styles.costLabel}>Custos faltantes</span>
+                <span>{route.cost.missingKinds.map(costKindLabel).join(", ")}</span>
+              </div>
+            ) : null}
             {route.eligibility.missingData.length > 0 ? (
               <details className={styles.disclosure} style={{ marginTop: 8 }}>
                 <summary>Dados faltantes ({route.eligibility.missingData.length})</summary>
@@ -159,6 +216,15 @@ export function ResultPanel({ result }: { result: SimulationResponseDTO }) {
             </div>
           </div>
         </div>
+        <ul className={styles.list} style={{ marginTop: 12 }}>
+          <li>Menor custo total: {dimSummary(result.comparison.costTotal)}</li>
+          <li>
+            Menor subtotal conhecido:{" "}
+            {dimSummary(result.comparison.costKnownSubtotal)}
+          </li>
+          <li>Menor distância: {dimSummary(result.comparison.distance)}</li>
+          <li>Menor duração: {dimSummary(result.comparison.duration)}</li>
+        </ul>
       </section>
 
       <section className={styles.resultBlock}>
@@ -167,6 +233,13 @@ export function ResultPanel({ result }: { result: SimulationResponseDTO }) {
           Aplicabilidade: {applicabilityLabel(result.window48h.applicability)} · Viabilidade:{" "}
           {windowLabel(result.window48h.viability)}
         </p>
+        {window48hNeedsExecInfo ? (
+          <p className={styles.routeSummary} style={{ marginTop: 6 }}>
+            Falta: informação operacional sobre a execução da retirada dentro da
+            janela. O motor mantém a viabilidade indeterminada em vez de assumir
+            uma conclusão.
+          </p>
+        ) : null}
       </section>
 
       <section className={styles.resultBlock}>

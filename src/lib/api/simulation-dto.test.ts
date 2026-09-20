@@ -88,6 +88,10 @@ describe("toSimulationResponse", () => {
     expect(dto.anuencia.status).toBe("NOT_FOUND");
     expect(dto.routes.length).toBe(DEMO_CATALOG.routes.length);
     expect(dto.routes[0].cost.total).toBeNull();
+    // DTA e disponibilidade agora expostos no contrato (AJUSTE ETAPA FINAL 2).
+    expect(dto.routes[0].requiresDta.status).toBeTruthy();
+    expect(dto.routes[0].availability.status).toBe("UNKNOWN");
+    expect(typeof dto.routes[0].movement).toBe("string");
     expect(Array.isArray(dto.comparison.viable)).toBe(true);
     expect(dto.window48h.applicability).toBe("INDETERMINADO");
     // evidências globais expostas (podem estar vazias quando nada as sustenta)
