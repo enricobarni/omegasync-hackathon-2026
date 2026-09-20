@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-20 — ETAPA FINAL 3 (OAuth Logcomex e agente da empresa).
+Última atualização: 2026-09-20 — ETAPA FINAL 4 (Readiness da demo).
 
 ---
 
@@ -242,6 +242,35 @@ Estados atualizados:
   login interativo** (passo humano). Fora isso, MITIGADA via MCP.
 - **L11/L18 — anuência (NCM → órgão/LPCO):** seguem **ABERTAS.** Mesmo com o
   agente da empresa, o `reply` é texto livre e não promove fato ao motor.
+
+---
+
+## 0.5. ETAPA FINAL 4 — Readiness da demo (2026-09-20)
+
+Referência: `PLANEJAMENTO-FINALIZACAO.md §16–§22`. Branch
+`chore/prototype-demo-readiness`. Sem features novas.
+
+Feito:
+
+- **`DEMO.md`**: cenário oficial único (NCM real `85171300`; demais valores como
+  entrada do usuário ou premissa rotulada), roteiro 1–13, perguntas de teste e
+  matriz de testes de falha. Nenhum número inventado.
+- **README.md**: seção Logcomex atualizada para o **OAuth interativo** do agente
+  da empresa (rotas `/api/logcomex/auth/*`, sessão server-side, seleção por nome)
+  e ponteiro para `DEMO.md`.
+- **Verificação ponta a ponta ao vivo** (`next start`, MCP real, 2026-09-20):
+  simulação do cenário → liberação e ambas as rotas **INDETERMINADAS**, custo
+  total `null` ("Indeterminado", nunca R$ 0,00), anuência `NOT_FOUND` (nenhum
+  órgão inventado), evidências com proveniência/confiança; assistente público
+  (`LOGCOMEX_PUBLIC_AGENT`, `OK`) explicou a indeterminação usando o resultado
+  como contexto; **teste de falha** com MCP inexistente → `FALLBACK`/`UNAVAILABLE`
+  `degraded`, app segue utilizável; `/api/logcomex/auth/status` devolve só
+  `{ authenticated, agentName }`.
+
+Sem novas lacunas. As ausências (custo/distância/prazo/disponibilidade/anuência)
+seguem L01–L25; o produto as mostra como desconhecidas/premissas, sem invenção.
+Único passo pendente para a demo completa é o **login OAuth interativo** do
+agente da empresa (operador humano), já previsto em `FONTES.md §34`.
 
 ---
 
@@ -525,3 +554,7 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   fallback público, e UI de conexão no ChatPanel. Discovery/DCR/PKCE validados
   contra o servidor real; login interativo pendente (passo humano). Ver seção
   "0.4" e `FONTES.md §34`.
+- **2026-09-20 — ETAPA FINAL 4 (Readiness da demo):** `DEMO.md` (cenário oficial,
+  roteiro e testes de falha), README atualizado (OAuth do agente da empresa) e
+  verificação ponta a ponta ao vivo (simulação, assistente e teste de falha).
+  Ver seção "0.5".
