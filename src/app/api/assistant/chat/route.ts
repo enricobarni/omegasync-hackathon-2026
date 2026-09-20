@@ -10,6 +10,7 @@
 import type { SimulationResponseDTO } from "@/lib/api";
 import { createMcpAssistantPort, handleChat } from "@/lib/assistant";
 import { MAX_CHAT_MESSAGE_LENGTH } from "@/lib/logcomex/mcp";
+import { getSessionFromCookieHeader } from "@/lib/logcomex/mcp/oauth";
 
 export const runtime = "nodejs";
 
@@ -61,9 +62,13 @@ export async function POST(request: Request): Promise<Response> {
   const conversationId =
     typeof body.conversationId === "string" ? body.conversationId : undefined;
 
+  // Sessão OAuth (agente da empresa) quando autenticada; senão, agente público.
+  // O token permanece server-side — apenas o id de sessão vem no cookie.
+  const session = getSessionFromCookieHeader(request.headers.get("cookie"));
+
   const response = await handleChat(
     { message: message.trim(), simulation, conversationId },
-    createMcpAssistantPort(),
+    createMcpAssistantPort(session),
   );
 
   return Response.json(response, { status: 200 });
