@@ -43,8 +43,11 @@ describe("adaptImportAnalysis", () => {
     expect(row.probableImporter.status).toBe("UNKNOWN");
   });
 
-  it("lida com resposta sem linhas", () => {
-    const analysis = adaptImportAnalysis({}, ACCESSED_AT);
-    expect(analysis.rows).toEqual([]);
+  it("moeda não confirmada e distingue ausência de zero registros (AJUSTE 14.1/14.2)", () => {
+    expect(adaptImportAnalysis({ linhas: [] }, ACCESSED_AT).rowsProvided).toBe(true);
+    const semLinhas = adaptImportAnalysis({}, ACCESSED_AT);
+    expect(semLinhas.rows).toEqual([]);
+    expect(semLinhas.rowsProvided).toBe(false);
+    expect(semLinhas.currencyConfirmed).toBe(false);
   });
 });
