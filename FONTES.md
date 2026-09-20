@@ -1239,3 +1239,72 @@ Ao precisar de uma regra já tratada no OmegaSync anterior:
 
 O novo OmegaSync deve aproveitar todo o aprendizado anterior sem carregar cegamente as limitações
 da implementação anterior.
+
+---
+
+# 34. Logcomex — MCP (chat consultivo)
+
+Integração principal com a Logcomex nesta rodada (a Agent API HTTP foi adiada
+por instabilidade relatada pelo provedor).
+
+Endpoint efetivamente usado e validado:
+
+```text
+https://mcp.logcomex.ai/
+data da validação: 2026-09-20
+protocolo MCP: 2025-06-18 · serverInfo: logcomex-ai-mcp v1.1.0
+```
+
+Tools observadas via discovery real (`tools/list`):
+
+```text
+chat_free           · funcionou · SEM autenticação
+chat_with_agent     · requer OAuth (escopo mcp:chat:agents)
+list_agents         · requer OAuth (escopo mcp:chat:agents)
+get_task_status     · polling de execução assíncrona
+cancel_task
+list_missions       · não exercitado nesta rodada
+search_missions     · não exercitado nesta rodada
+get_mission         · não exercitado nesta rodada
+```
+
+Modo de autenticação observado:
+
+```text
+free/public agent (chat_free)  → sem login
+company agents                 → OAuth 2.0 Authorization Code + PKCE (S256)
+  authorization_endpoint: /authorize
+  token_endpoint:         /token
+  registration_endpoint:  /register (Dynamic Client Registration)
+  scopes: mcp:chat:free, mcp:chat:agents, offline_access
+  bearer_methods_supported: header
+```
+
+Não há grant client_credentials/headless nem API key manual: o agente da empresa
+depende de um token obtido pelo fluxo interativo real de OAuth. No protótipo, o
+token (quando existir) é fornecido server-side por `LOGCOMEX_MCP_ACCESS_TOKEN` —
+nunca inventado, nunca exposto ao browser.
+
+Formato das respostas (confirmado):
+
+```text
+chat_free / chat_with_agent devolvem:
+  structuredContent = { status, reply, conversation_id }
+  (ou, assíncrono, { status: "pending", task_id })
+  reply = TEXTO LIVRE (markdown)
+```
+
+Regra de uso (crítica):
+
+```text
+o reply é CONTEXTO/ORIENTAÇÃO, nunca fato determinístico
+texto livre != dado estruturado
+resposta genérica sobre órgão anuente/LPCO NÃO altera o motor
+  → o motor permanece UNKNOWN/INDETERMINADO
+```
+
+Provenance para o código: `EXTERNAL_API`, publisher Logcomex, confiança não
+elevada (texto consultivo). Só há evidência estruturada quando o agente da
+empresa for exercitado e devolver `structuredContent` validável por schema — o
+que NÃO foi confirmado nesta rodada. Análise documental, tracking e tratamento
+administrativo permanecem como contexto até essa confirmação.
