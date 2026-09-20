@@ -9,7 +9,6 @@ O OmegaSync recebe os dados de uma operação de importação, avalia alternativ
 ## Links públicos
 
 - **Aplicação:** https://omegasync-hackathon-2026.vercel.app/
-- **Repositório:** https://github.com/enricobarni/omegasync-hackathon-2026
 
 ## O que está funcional
 
@@ -154,7 +153,7 @@ Um cenário de demonstração disponível no projeto:
 
 Resultado esperado: o motor deve explicitar as incertezas da operação em vez de fabricar valores ou conclusões.
 
-O roteiro completo está em [`DEMO.md`](./DEMO.md).
+O roteiro completo está em [`DEMO.md`](./ESTRUTURA-DOCUMENTAL/DEMO.md).
 
 ## Assistente Logcomex
 
@@ -289,8 +288,8 @@ Nenhuma ausência de dado é silenciosamente convertida em valor real.
 
 Para rastreabilidade completa:
 
-- [`FONTES.md`](./FONTES.md)
-- [`LACUNAS-REVIEW.md`](./LACUNAS-REVIEW.md)
+- [`FONTES.md`](./ESTRUTURA-DOCUMENTAL/FONTES.md)
+- [`LACUNAS-REVIEW.md`](./ESTRUTURA-DOCUMENTAL/LACUNAS-REVIEW.md)
 
 ## Validação técnica
 
@@ -307,12 +306,13 @@ O repositório também possui CI executando essas verificações em pushes e Pul
 
 ## Estrutura documental
 
-- [`DEMO.md`](./DEMO.md) — roteiro oficial da demonstração.
-- [`FONTES.md`](./FONTES.md) — fontes, dados e evidências.
-- [`LACUNAS-REVIEW.md`](./LACUNAS-REVIEW.md) — limitações, decisões e lacunas conhecidas.
-- [`PLANEJAMENTO.md`](./PLANEJAMENTO.md) — planejamento técnico.
-- [`PLANEJAMENTO-MCP.md`](./PLANEJAMENTO-MCP.md) — integração Logcomex/MCP.
-- [`DESIGN.md`](./DESIGN.md) — diretrizes de interface.
+- [`DEMO.md`](./ESTRUTURA-DOCUMENTAL/DEMO.md) — roteiro oficial da demonstração.
+- [`FONTES.md`](./ESTRUTURA-DOCUMENTAL/FONTES.md) — fontes, dados e evidências.
+- [`LACUNAS-REVIEW.md`](./ESTRUTURA-DOCUMENTAL/LACUNAS-REVIEW.md) — limitações, decisões e lacunas conhecidas.
+- [`PLANEJAMENTO.md`](./ESTRUTURA-DOCUMENTAL/PLANEJAMENTO.md) — planejamento técnico.
+- [`PLANEJAMENTO-MCP.md`](./ESTRUTURA-DOCUMENTAL/PLANEJAMENTO-MCP.md) — integração Logcomex/MCP.
+- [`PLANEJAMENTO-FINALIZACAO.md`](./ESTRUTURA-DOCUMENTAL/PLANEJAMENTO-FINALIZACAO.md) — planejamento e fechamento do protótipo.
+- [`DESIGN.md`](./ESTRUTURA-DOCUMENTAL/DESIGN.md) — diretrizes de interface.
 
 ## Limitações conhecidas
 
