@@ -29,7 +29,6 @@ import type {
 import {
   createCostComponent,
   knownAmount,
-  notApplicableAmount,
   summarizeCosts,
   unknownAmount,
 } from "../domain";
@@ -49,6 +48,8 @@ export interface StorageRates {
   firstPeriodRate: number | null;
   secondPeriodRate: number | null;
   subsequentRate: number | null;
+  /** Valor mínimo em BRL, quando documentado (AJUSTE 5.4). */
+  minimumValue?: number | null;
 }
 
 /**
@@ -84,7 +85,14 @@ export function calculateStorageAdValorem(
     accumulated += rates.subsequentRate * (periods - 2);
   }
 
-  return roundCents(cif * accumulated);
+  const value = cif * accumulated;
+  // Aplica o mínimo documentado quando conhecido (AJUSTE 5.4). Mínimo null =
+  // "não documentado" (AJUSTE 5.2): não é tratado como "sem mínimo" além de
+  // não elevar o valor — a ressalva viaja no dataset tarifário.
+  const min = rates.minimumValue;
+  const floored =
+    typeof min === "number" && Number.isFinite(min) ? Math.max(value, min) : value;
+  return roundCents(floored);
 }
 
 /** Descarga direta: percentual do CIF, respeitando o mínimo quando conhecido. */
@@ -273,7 +281,12 @@ export function buildSseComponent(input: SseComponentInput): CostComponent {
   let amount: MonetaryAmount;
 
   if (!input.active) {
-    amount = notApplicableAmount("SSE desativado na simulação (FONTES §20).");
+    // SSE desligado POR PREMISSA (FONTES §20) não é um "não aplicável" factual
+    // (AJUSTE 5.8/L15): é uma premissa de valor 0, rastreável como tal.
+    amount = knownAmount(0, {
+      origin: "PREMISSA_SIMULACAO",
+      reference: "SSE desativado por premissa na simulação (FONTES §20)",
+    });
   } else if (input.amountWhenActive === null) {
     amount = unknownAmount("Valor do SSE não informado.");
   } else if (!isFiniteNonNegative(input.amountWhenActive)) {

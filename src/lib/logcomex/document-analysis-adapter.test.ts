@@ -69,7 +69,18 @@ describe("adaptDocumentAnalysis", () => {
     expect(e.fob.status).toBe("UNKNOWN");
     expect(e.origin.status).toBe("UNKNOWN");
     expect(e.items).toEqual([]);
+    // itens ausentes (não enviados) distinto de lista vazia enviada (AJUSTE 11.2)
+    expect(e.itemsProvided).toBe(false);
     expect(e.documentRisks).toEqual([]);
+  });
+
+  it("preserva validação cruzada/divergências do documento (AJUSTE 11.1)", () => {
+    const e = adaptDocumentAnalysis(
+      { validacao_cruzada_campos: { peso: "divergente" }, dados_embarque: { itens: [] } },
+      ACCESSED_AT,
+    );
+    expect(e.crossFieldValidation).toEqual({ peso: "divergente" });
+    expect(e.itemsProvided).toBe(true);
   });
 
   it("normaliza riscos como string única", () => {

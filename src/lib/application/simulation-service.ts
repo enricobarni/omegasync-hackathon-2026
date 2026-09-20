@@ -95,9 +95,14 @@ function costComponentsForRoute(
   input: SimulationInput,
   route: Route,
 ): CostComponent[] {
+  // Fonte única de custo (AJUSTE 5.9/9.11): o override por rota tem prioridade;
+  // na sua ausência, usa-se os componentes da própria rota.
   const provided = input.routeCostComponents?.[route.id];
   if (provided && provided.length > 0) {
     return provided;
+  }
+  if (route.costComponents.length > 0) {
+    return route.costComponents;
   }
   // Sem custo informado => custo desconhecido (não zero).
   return [

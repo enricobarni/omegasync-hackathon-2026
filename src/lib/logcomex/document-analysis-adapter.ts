@@ -59,7 +59,11 @@ export interface DocumentEnrichment {
   freight: MonetaryAmount;
   insurance: MonetaryAmount;
   items: DocumentEnrichmentItem[];
+  /** false quando o provedor não enviou o array de itens (AJUSTE 11.2). */
+  itemsProvided: boolean;
   documentRisks: string[];
+  /** Validação cruzada/divergências do documento, preservadas (AJUSTE 11.1). */
+  crossFieldValidation: unknown;
   summary: TrackedValue<string>;
   /** Confiança global reportada pelo provedor (0–100). */
   overallConfidence: TrackedValue<number>;
@@ -162,6 +166,7 @@ export function adaptDocumentAnalysis(
   };
 
   const dados: LogcomexDadosEmbarqueDTO = dto.dados_embarque ?? {};
+  const itemsProvided = Array.isArray(dados.itens);
   const items = (dados.itens ?? []).map((item) => adaptItem(item, evidence));
 
   return {
@@ -174,7 +179,9 @@ export function adaptDocumentAnalysis(
     freight: trackMoney(dados.valor_frete, evidence),
     insurance: trackMoney(dados.valor_seguro, evidence),
     items,
+    itemsProvided,
     documentRisks: normalizeRisks(dto.riscos_aduan_sugest),
+    crossFieldValidation: dto.validacao_cruzada_campos ?? null,
     summary: trackString(dto.resumo_executivo, evidence),
     overallConfidence: trackNumber(dto.percentual_confianca, evidence),
     source,

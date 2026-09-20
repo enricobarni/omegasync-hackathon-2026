@@ -108,10 +108,13 @@ describe("construtores de componente", () => {
     expect(capital.amount.status).toBe("KNOWN");
   });
 
-  it("SSE: OFF => não aplicável; ON sem valor => desconhecido", () => {
-    expect(buildSseComponent({ active: false, amountWhenActive: null }).amount.status).toBe(
-      "NOT_APPLICABLE",
-    );
+  it("SSE: OFF => premissa de valor 0 (não N/A factual); ON sem valor => desconhecido", () => {
+    const off = buildSseComponent({ active: false, amountWhenActive: null });
+    expect(off.amount.status).toBe("KNOWN");
+    if (off.amount.status === "KNOWN") {
+      expect(off.amount.value).toBe(0);
+      expect(off.amount.evidence.origin).toBe("PREMISSA_SIMULACAO");
+    }
     expect(buildSseComponent({ active: true, amountWhenActive: null }).amount.status).toBe(
       "UNKNOWN",
     );
