@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-19 — rodada final de correções (CORRECAO.md).
+Última atualização: 2026-09-20 — integração MCP Logcomex (chat consultivo).
 
 ---
 
@@ -84,6 +84,57 @@ Estados usados aqui: `RESOLVIDA POR CÓDIGO`, `MITIGADA`,
   5.10, 6.6–6.9) e de UI documental (12.2).
 
 ---
+
+---
+
+## 0.1. Integração MCP Logcomex — chat consultivo (2026-09-20)
+
+Referências: `PLANEJAMENTO-MCP.md` (referência operacional da feature),
+`FONTES.md §34`. Branch `feat/logcomex-mcp-assistant`.
+
+Fatos CONFIRMADOS contra o MCP real `https://mcp.logcomex.ai/` (validado
+2026-09-20, protocolo 2025-06-18, server `logcomex-ai-mcp v1.1.0`):
+
+- handshake `initialize` e discovery `tools/list` funcionam **sem autenticação**;
+- tools reais: `chat_free`, `chat_with_agent`, `list_agents`, `get_task_status`,
+  `cancel_task`, `list_missions`, `search_missions`, `get_mission`;
+- **`chat_free` (agente público) não requer token** — caminho padrão do protótipo;
+- **agentes da empresa exigem OAuth 2.0** (Authorization Code + PKCE, escopo
+  `mcp:chat:agents`); confirmado 401 `www-authenticate: Bearer` ao chamar
+  `list_agents` sem token. Um agente da empresa existe para a OMEGASYNC
+  (`Agente PortoHackSantos26-GP07`), acessível pelo conector OAuth da plataforma;
+- respostas de chat retornam `structuredContent {status, reply, conversation_id}`
+  — **`reply` é texto livre**, nunca fato determinístico.
+
+O que foi implementado (e validado ponta a ponta com o MCP real, não só mocks):
+cliente MCP server-side (SDK oficial + Streamable HTTP), serviço de agentes com
+polling assíncrono, `ChatService` com contexto da simulação e guardrails,
+`POST /api/assistant/chat` e `ChatPanel`. Falha/timeout → estado `degraded`.
+
+Estados atualizados:
+
+- **L20 — cliente HTTP/endpoint Logcomex:** **MITIGADA (via MCP).** O caminho
+  crítico agora é o MCP (endpoint confirmado, agente público sem credencial). O
+  agente da empresa continua **BLOQUEADO POR AUTENTICAÇÃO** (OAuth interativo;
+  token não fornecido nesta rodada). A Agent API HTTP permanece **ADIADA**.
+- **L11/L18 — anuência (NCM → órgão/LPCO):** **ABERTA.** O MCP responde apenas
+  em texto livre; **não** promove órgão anuente/LPCO a dado determinístico. O
+  motor permanece UNKNOWN/INDETERMINADO (guardrail administrativo no chat).
+- **L23 — schema estruturado do tracking:** **ABERTA.** Não exercitado nesta
+  rodada; tracking/documental via MCP só avançam após confirmar `structuredContent`.
+
+Divergência registrada (sem improviso silencioso): o `PLANEJAMENTO-MCP.md`
+supôs poder usar o agente da empresa; na prática ele exige **OAuth interativo**
+(sem grant headless nem API key). Conforme a contingência do próprio plano (§9),
+o protótipo usa o **agente público** como caminho confiável e mantém o agente da
+empresa como opção quando um token OAuth real for fornecido — arquitetura e
+contrato inalterados. Nota de SDK: o plano citou `@modelcontextprotocol/client`
+(v2, recente); foi usado o pacote oficial estável `@modelcontextprotocol/sdk`
+(>=1.30), compatível com o stack atual sem upgrades.
+
+Não implementado nesta rodada (fora do escopo do chat): análise documental via
+MCP, tracking via MCP, tratamento administrativo estruturado, Agent API HTTP,
+persistência de conversa, streaming.
 
 ---
 
@@ -347,3 +398,8 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   os estados. Itens ainda em aberto: E2E de browser (requer runner/dependência a
   autorizar) e o backlog Logcomex bloqueado por contrato/credenciais do provedor
   (grupos C/D) — por isso `CORRECAO.md` é mantido.
+- **2026-09-20 — Integração MCP Logcomex (chat consultivo):** cliente MCP
+  server-side, serviço de agentes, `ChatService`, `POST /api/assistant/chat` e
+  `ChatPanel`. Endpoint e tools reais confirmados; agente público sem auth;
+  agente da empresa via OAuth. Ver seção "0.1". L20 MITIGADA (via MCP); L11/L18/
+  L23 seguem ABERTAS (só texto livre, sem fonte estruturada).
