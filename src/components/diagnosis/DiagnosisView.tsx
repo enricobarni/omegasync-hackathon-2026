@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { CARGO_TYPES, CUSTOMS_CHANNELS, OEA_STATUSES } from "@/lib/domain";
 import type { SimulationResponseDTO } from "@/lib/api";
+import { ChatPanel } from "@/components/assistant/ChatPanel";
 import { ResultPanel } from "./ResultPanel";
 import styles from "./diagnosis.module.css";
 
@@ -259,6 +260,7 @@ export function DiagnosisView() {
           >
             {uiState === "SUBMITTING" ? "Simulando…" : "Simular operação"}
           </button>
+          <ChatPanel simulation={uiState === "RESULT" ? result : null} />
         </div>
       </form>
 
