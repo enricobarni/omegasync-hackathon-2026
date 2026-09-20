@@ -46,10 +46,11 @@ describe("dataset tarifário", () => {
     expect(r.caveats.join(" ")).toContain("SSE");
   });
 
-  it("Descarga Direta Santos Brasil preserva a ressalva de Imbituba e não é confiança A", () => {
+  it("Descarga Direta Santos Brasil preserva Imbituba, confiança C e NÃO consolidada (AJUSTE 4.1)", () => {
     const r = TARIFF_SANTOS_BRASIL_DIRECT_DISCHARGE;
     expect(r.confidence).not.toBe("A");
     expect(r.confidence).toBe("C");
+    expect(r.consolidated).toBe(false);
     expect(r.rates.rate).toBe(0.0054);
     expect(r.rates.minimumValue).toBe(1063.08);
     expect(r.caveats.join(" ")).toContain("Imbituba");

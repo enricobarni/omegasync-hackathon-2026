@@ -42,4 +42,37 @@ describe("POST /api/simulations", () => {
     expect(Array.isArray(json.routes)).toBe(true);
     expect(json.comparison).toBeDefined();
   });
+
+  it("fluxo essencial: baseline indeterminado com evidências e dados faltantes", async () => {
+    const res = await POST(
+      postRequest(
+        JSON.stringify({
+          cargo: { ncm: "84713012", cargoType: "FCL", oeaStatus: "NAO_OEA", channel: "VERDE" },
+        }),
+      ),
+    );
+    const json = await res.json();
+    // registro de anuência vazio => liberação indeterminada; rota-modelo indeterminada
+    expect(json.clearance.status).toBe("INDETERMINADA");
+    expect(json.routes[0].eligibility.status).toBe("INDETERMINADA");
+    // custo não informado nunca vira zero
+    expect(json.routes[0].cost.total).toBeNull();
+    // evidências e dados faltantes presentes (auditabilidade / estado parcial)
+    expect(Array.isArray(json.evidences)).toBe(true);
+    expect(json.missingData.length).toBeGreaterThan(0);
+    // dimensão de custo não engana quando não há rota viável
+    expect(json.comparison.costTotal.status).toBe("UNAVAILABLE");
+  });
+
+  it("rejeita tipo inválido em operation (AJUSTE 10.3)", async () => {
+    const res = await POST(
+      postRequest(
+        JSON.stringify({
+          cargo: { ncm: "84713012", cargoType: "FCL", oeaStatus: "NAO_OEA", channel: "VERDE" },
+          operation: { cargoYardWithdrawal: "sim" },
+        }),
+      ),
+    );
+    expect(res.status).toBe(400);
+  });
 });

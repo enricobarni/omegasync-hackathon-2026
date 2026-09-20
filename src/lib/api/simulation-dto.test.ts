@@ -4,7 +4,7 @@ import {
   toSimulationResponse,
   validateSimulationRequest,
 } from "./simulation-dto";
-import { BASELINE_CATALOG } from "../catalog";
+import { DEMO_CATALOG } from "../catalog";
 import { runSimulation } from "../application";
 
 const CARGO_VALIDO = {
@@ -80,19 +80,21 @@ describe("toSimulationResponse", () => {
     }
     const result = runSimulation({
       ...validation.value,
-      routes: BASELINE_CATALOG.routes,
+      routes: DEMO_CATALOG.routes,
     });
     const dto = toSimulationResponse(result);
 
     expect(dto.clearance.status).toBe("INDETERMINADA");
     expect(dto.anuencia.status).toBe("NOT_FOUND");
-    expect(dto.routes.length).toBe(BASELINE_CATALOG.routes.length);
+    expect(dto.routes.length).toBe(DEMO_CATALOG.routes.length);
     expect(dto.routes[0].cost.total).toBeNull();
     expect(Array.isArray(dto.comparison.viable)).toBe(true);
     expect(dto.window48h.applicability).toBe("INDETERMINADO");
-    // evidências expostas no contrato (ETAPA 16 / L22)
+    // evidências globais expostas (podem estar vazias quando nada as sustenta)
     expect(Array.isArray(dto.evidences)).toBe(true);
-    expect(dto.evidences.length).toBeGreaterThan(0);
-    expect(dto.evidences[0].originLabel).toBeTruthy();
+    // rastreabilidade por saída: cada regra da rota carrega motivo (AJUSTE 16.1)
+    expect(dto.routes[0].eligibility.reasons.length).toBeGreaterThan(0);
+    const dtaReason = dto.routes[0].eligibility.reasons.find((r) => r.rule === "DTA");
+    expect(dtaReason?.evidence?.originLabel).toBeTruthy();
   });
 });

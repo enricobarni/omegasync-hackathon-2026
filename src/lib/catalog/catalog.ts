@@ -5,12 +5,12 @@
  */
 
 import type { CargoType, CustomsZone, Facility, FacilityType, Route } from "../domain";
-import { acceptsCargoType } from "../domain";
+import { cargoTypeAcceptance } from "../domain";
 
-/** Catálogo de recintos e rotas. */
+/** Catálogo de recintos e rotas (imutável após validado — AJUSTE 2.4). */
 export interface Catalog {
-  facilities: Facility[];
-  routes: Route[];
+  readonly facilities: readonly Facility[];
+  readonly routes: readonly Route[];
 }
 
 export const CATALOG_ISSUE_KINDS = [
@@ -18,6 +18,7 @@ export const CATALOG_ISSUE_KINDS = [
   "DUPLICATE_ROUTE_ID",
   "ROUTE_ORIGIN_NOT_FOUND",
   "ROUTE_DESTINATION_NOT_FOUND",
+  "ROUTE_FACILITY_DIVERGENT",
 ] as const;
 export type CatalogIssueKind = (typeof CATALOG_ISSUE_KINDS)[number];
 
@@ -35,11 +36,12 @@ export type CatalogValidation =
  * rotas que só referenciam recintos existentes. Função pura.
  */
 export function validateCatalog(
-  facilities: Facility[],
-  routes: Route[],
+  facilities: readonly Facility[],
+  routes: readonly Route[],
 ): CatalogValidation {
   const issues: CatalogIssue[] = [];
 
+  const facilityById = new Map<string, Facility>();
   const facilityIds = new Set<string>();
   const duplicateFacilityIds = new Set<string>();
   for (const facility of facilities) {
@@ -47,6 +49,7 @@ export function validateCatalog(
       duplicateFacilityIds.add(facility.id);
     }
     facilityIds.add(facility.id);
+    facilityById.set(facility.id, facility);
   }
   for (const id of duplicateFacilityIds) {
     issues.push({
@@ -71,21 +74,44 @@ export function validateCatalog(
   }
 
   for (const route of routes) {
-    if (!facilityIds.has(route.origin.id)) {
-      issues.push({
-        kind: "ROUTE_ORIGIN_NOT_FOUND",
-        detail: `Rota ${route.id} referencia origem inexistente: ${route.origin.id}`,
-      });
-    }
-    if (!facilityIds.has(route.destination.id)) {
-      issues.push({
-        kind: "ROUTE_DESTINATION_NOT_FOUND",
-        detail: `Rota ${route.id} referencia destino inexistente: ${route.destination.id}`,
-      });
-    }
+    checkRouteEndpoint(route, route.origin, "origin", facilityById, issues);
+    checkRouteEndpoint(route, route.destination, "destination", facilityById, issues);
   }
 
   return issues.length === 0 ? { valid: true } : { valid: false, issues };
+}
+
+/**
+ * Verifica que o recinto embutido na rota existe no catálogo E corresponde à
+ * identidade canônica (id + zona + tipo + nome). Impede que a rota use uma
+ * versão divergente do mesmo id (AJUSTE 2.1).
+ */
+function checkRouteEndpoint(
+  route: Route,
+  embedded: Facility,
+  role: "origin" | "destination",
+  facilityById: Map<string, Facility>,
+  issues: CatalogIssue[],
+): void {
+  const canonical = facilityById.get(embedded.id);
+  if (!canonical) {
+    issues.push({
+      kind:
+        role === "origin" ? "ROUTE_ORIGIN_NOT_FOUND" : "ROUTE_DESTINATION_NOT_FOUND",
+      detail: `Rota ${route.id} referencia ${role} inexistente: ${embedded.id}`,
+    });
+    return;
+  }
+  if (
+    canonical.zone !== embedded.zone ||
+    canonical.type !== embedded.type ||
+    canonical.name !== embedded.name
+  ) {
+    issues.push({
+      kind: "ROUTE_FACILITY_DIVERGENT",
+      detail: `Rota ${route.id} usa uma versão divergente do recinto ${embedded.id} (${role}): zona/tipo/nome não conferem com o catálogo`,
+    });
+  }
 }
 
 /**
@@ -94,15 +120,19 @@ export function validateCatalog(
  * baseline, que devem estar corretos em tempo de construção.
  */
 export function createCatalog(
-  facilities: Facility[],
-  routes: Route[],
+  facilities: readonly Facility[],
+  routes: readonly Route[],
 ): Catalog {
   const validation = validateCatalog(facilities, routes);
   if (!validation.valid) {
     const detalhes = validation.issues.map((issue) => issue.detail).join("; ");
     throw new Error(`Catálogo inválido: ${detalhes}`);
   }
-  return { facilities, routes };
+  // Congela cópias para impedir mutação após a validação (AJUSTE 2.4).
+  return {
+    facilities: Object.freeze([...facilities]),
+    routes: Object.freeze([...routes]),
+  };
 }
 
 export function getFacility(
@@ -142,14 +172,17 @@ export function listRoutesTo(catalog: Catalog, facilityId: string): Route[] {
 }
 
 /**
- * Rotas que aceitam explicitamente um tipo de carga. Rota sem tipos
- * confirmados não é assumida como compatível (ver `acceptsCargoType`).
+ * Rotas que aceitam explicitamente um tipo de carga (aceitação = ACCEPTED).
+ * Rota com aceitação desconhecida ou rejeitada não entra (ver
+ * `cargoTypeAcceptance`): desconhecido não vira compatível.
  */
 export function listRoutesAcceptingCargo(
   catalog: Catalog,
   cargoType: CargoType,
 ): Route[] {
-  return catalog.routes.filter((route) => acceptsCargoType(route, cargoType));
+  return catalog.routes.filter(
+    (route) => cargoTypeAcceptance(route, cargoType) === "ACCEPTED",
+  );
 }
 
 /**

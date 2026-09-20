@@ -54,9 +54,15 @@ export const RECINTO_ZS_GENERICO: Facility = {
   source: SOURCE_MENTORIA_ZONAS,
 };
 
-/** Recintos de Zona Primária com fonte no baseline tarifário. */
-export const BASELINE_FACILITIES: Facility[] = [
+/**
+ * Recintos operacionais/verificados (entidades reais com fonte). O placeholder
+ * de simulação é mantido em coleção separada (AJUSTE 2.3) para não ser tratado
+ * como candidato operacional real.
+ */
+export const OPERATIONAL_FACILITIES: readonly Facility[] = [
   DP_WORLD_SANTOS,
   BTP_SANTOS,
-  RECINTO_ZS_GENERICO,
 ];
+
+/** Recintos sintéticos de simulação/demonstração (não operacionais). */
+export const SIMULATION_FACILITIES: readonly Facility[] = [RECINTO_ZS_GENERICO];

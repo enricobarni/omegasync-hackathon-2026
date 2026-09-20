@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { Facility, Route } from "../domain";
 import {
-  acceptsCargoType,
   availabilityUnknown,
+  cargoTypeAcceptance,
   createEvidence,
   dtaRequirementUnknown,
   known,
@@ -45,7 +45,7 @@ function criarRota(overrides: Partial<Route> = {}): Route {
     origin: TERMINAL,
     destination: RECINTO_ZS,
     requiresDta: dtaRequirementUnknown(),
-    acceptedCargoTypes: ["FCL"],
+    acceptedCargoTypes: known(["FCL"], EVIDENCIA),
     availability: availabilityUnknown(),
     distanceKm: unknown(),
     estimatedDurationHours: unknown(),
@@ -128,7 +128,7 @@ describe("consultas do catálogo", () => {
 
     const semTipos = createCatalog(
       [TERMINAL, RECINTO_ZS],
-      [criarRota({ acceptedCargoTypes: [] })],
+      [criarRota({ acceptedCargoTypes: unknown() })],
     );
     expect(listRoutesAcceptingCargo(semTipos, "FCL")).toHaveLength(0);
   });
@@ -149,15 +149,37 @@ describe("representação de rota", () => {
         evidence: createEvidence("PREMISSA_SIMULACAO", { confidence: "B" }),
       },
       distanceKm: known(23, EVIDENCIA),
-      restrictions: ["janela de retirada restrita"],
+      restrictions: [
+        {
+          code: "JANELA_RESTRITA",
+          description: "janela de retirada restrita",
+          evidence: EVIDENCIA,
+        },
+      ],
     });
 
     // origem, destino, DTA, aceita carga, disponibilidade, restrições, fonte
     expect(rota.origin.zone).toBe("ZONA_PRIMARIA");
     expect(rota.destination.zone).toBe("ZONA_SECUNDARIA");
     expect(rota.requiresDta.status).toBe("REQUIRED");
-    expect(acceptsCargoType(rota, "FCL")).toBe(true);
+    expect(cargoTypeAcceptance(rota, "FCL")).toBe("ACCEPTED");
     expect(rota.availability.status).toBe("UNKNOWN");
-    expect(rota.restrictions).toContain("janela de retirada restrita");
+    expect(rota.restrictions.map((r) => r.code)).toContain("JANELA_RESTRITA");
+  });
+});
+
+describe("validateCatalog — identidade canônica (AJUSTE 2.1)", () => {
+  it("rejeita rota que usa versão divergente de um recinto do catálogo", () => {
+    const divergente: Facility = { ...RECINTO_ZS, zone: "ZONA_PRIMARIA" };
+    const validation = validateCatalog(
+      [TERMINAL, RECINTO_ZS],
+      [criarRota({ destination: divergente })],
+    );
+    expect(validation.valid).toBe(false);
+    if (!validation.valid) {
+      expect(validation.issues.map((i) => i.kind)).toContain(
+        "ROUTE_FACILITY_DIVERGENT",
+      );
+    }
   });
 });

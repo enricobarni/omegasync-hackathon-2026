@@ -21,6 +21,7 @@
 
 import type {
   CostComponent,
+  CostComponentKind,
   CostSummary,
   Evidence,
   MonetaryAmount,
@@ -28,7 +29,6 @@ import type {
 import {
   createCostComponent,
   knownAmount,
-  notApplicableAmount,
   summarizeCosts,
   unknownAmount,
 } from "../domain";
@@ -37,12 +37,19 @@ function roundCents(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+/** Invariante numérica (AJUSTE 5.5): valor finito e não negativo. */
+function isFiniteNonNegative(value: number): boolean {
+  return Number.isFinite(value) && value >= 0;
+}
+
 /** Alíquotas de armazenagem por período (fields null = desconhecido). */
 export interface StorageRates {
   daysPerPeriod: number;
   firstPeriodRate: number | null;
   secondPeriodRate: number | null;
   subsequentRate: number | null;
+  /** Valor mínimo em BRL, quando documentado (AJUSTE 5.4). */
+  minimumValue?: number | null;
 }
 
 /**
@@ -78,7 +85,14 @@ export function calculateStorageAdValorem(
     accumulated += rates.subsequentRate * (periods - 2);
   }
 
-  return roundCents(cif * accumulated);
+  const value = cif * accumulated;
+  // Aplica o mínimo documentado quando conhecido (AJUSTE 5.4). Mínimo null =
+  // "não documentado" (AJUSTE 5.2): não é tratado como "sem mínimo" além de
+  // não elevar o valor — a ressalva viaja no dataset tarifário.
+  const min = rates.minimumValue;
+  const floored =
+    typeof min === "number" && Number.isFinite(min) ? Math.max(value, min) : value;
+  return roundCents(floored);
 }
 
 /** Descarga direta: percentual do CIF, respeitando o mínimo quando conhecido. */
@@ -134,6 +148,11 @@ export function buildStorageComponent(input: StorageComponentInput): CostCompone
     amount = unknownAmount("Tarifa de armazenagem não consolidada.");
   } else if (input.cif === null || input.daysOfStay === null) {
     amount = unknownAmount("CIF ou dias de permanência não informados.");
+  } else if (
+    !isFiniteNonNegative(input.cif) ||
+    !isFiniteNonNegative(input.daysOfStay)
+  ) {
+    amount = unknownAmount("CIF ou dias de permanência com valor inválido.");
   } else {
     const value = calculateStorageAdValorem(input.cif, input.daysOfStay, input.rates);
     amount =
@@ -150,6 +169,8 @@ export interface DirectDischargeComponentInput {
   rate: number | null;
   minimumValue: number | null;
   evidence: Evidence;
+  /** false quando a tarifa não é consolidada e não deve gerar custo (AJUSTE 5.3). */
+  consolidated?: boolean;
   label?: string;
 }
 
@@ -157,13 +178,26 @@ export function buildDirectDischargeComponent(
   input: DirectDischargeComponentInput,
 ): CostComponent {
   const label = input.label ?? "Descarga direta";
+  if (input.consolidated === false) {
+    return createCostComponent(
+      "DESCARGA",
+      label,
+      unknownAmount("Tarifa de descarga direta não consolidada."),
+    );
+  }
+  const invalid =
+    input.cif !== null &&
+    input.rate !== null &&
+    (!isFiniteNonNegative(input.cif) || !isFiniteNonNegative(input.rate));
   const amount: MonetaryAmount =
     input.cif === null || input.rate === null
       ? unknownAmount("CIF ou alíquota de descarga direta não informados.")
-      : knownAmount(
-          calculateDirectDischarge(input.cif, input.rate, input.minimumValue),
-          input.evidence,
-        );
+      : invalid
+        ? unknownAmount("CIF ou alíquota de descarga direta com valor inválido.")
+        : knownAmount(
+            calculateDirectDischarge(input.cif, input.rate, input.minimumValue),
+            input.evidence,
+          );
 
   return createCostComponent("DESCARGA", label, amount);
 }
@@ -179,13 +213,19 @@ export function buildTransportComponent(
   input: TransportComponentInput,
 ): CostComponent {
   const label = input.label ?? "Transporte";
+  const invalid =
+    input.distanceKm !== null &&
+    input.costPerKm !== null &&
+    (!isFiniteNonNegative(input.distanceKm) || !isFiniteNonNegative(input.costPerKm));
   const amount: MonetaryAmount =
     input.distanceKm === null || input.costPerKm === null
       ? unknownAmount("Distância ou custo por km não informados.")
-      : knownAmount(calculateTransportCost(input.distanceKm, input.costPerKm), {
-          origin: "PREMISSA_SIMULACAO",
-          reference: input.reference,
-        });
+      : invalid
+        ? unknownAmount("Distância ou custo por km com valor inválido.")
+        : knownAmount(calculateTransportCost(input.distanceKm, input.costPerKm), {
+            origin: "PREMISSA_SIMULACAO",
+            reference: input.reference,
+          });
 
   return createCostComponent("TRANSPORTE", label, amount);
 }
@@ -203,18 +243,28 @@ export function buildCapitalComponent(
   input: CapitalComponentInput,
 ): CostComponent {
   const label = input.label ?? "Custo de capital";
+  const invalid =
+    input.taxableAmount !== null &&
+    input.monthlyRate !== null &&
+    (!isFiniteNonNegative(input.taxableAmount) ||
+      !isFiniteNonNegative(input.monthlyRate) ||
+      !isFiniteNonNegative(input.daysAnticipated) ||
+      !Number.isFinite(input.monthDays) ||
+      input.monthDays <= 0);
   const amount: MonetaryAmount =
     input.taxableAmount === null || input.monthlyRate === null
       ? unknownAmount("Valor de tributos ou taxa de capital não informados.")
-      : knownAmount(
-          calculateCapitalCost(
-            input.taxableAmount,
-            input.daysAnticipated,
-            input.monthlyRate,
-            input.monthDays,
-          ),
-          { origin: "PREMISSA_SIMULACAO", reference: input.reference },
-        );
+      : invalid
+        ? unknownAmount("Parâmetros de custo de capital com valor inválido.")
+        : knownAmount(
+            calculateCapitalCost(
+              input.taxableAmount,
+              input.daysAnticipated,
+              input.monthlyRate,
+              input.monthDays,
+            ),
+            { origin: "PREMISSA_SIMULACAO", reference: input.reference },
+          );
 
   return createCostComponent("CUSTO_CAPITAL", label, amount);
 }
@@ -231,9 +281,16 @@ export function buildSseComponent(input: SseComponentInput): CostComponent {
   let amount: MonetaryAmount;
 
   if (!input.active) {
-    amount = notApplicableAmount("SSE desativado na simulação (FONTES §20).");
+    // SSE desligado POR PREMISSA (FONTES §20) não é um "não aplicável" factual
+    // (AJUSTE 5.8/L15): é uma premissa de valor 0, rastreável como tal.
+    amount = knownAmount(0, {
+      origin: "PREMISSA_SIMULACAO",
+      reference: "SSE desativado por premissa na simulação (FONTES §20)",
+    });
   } else if (input.amountWhenActive === null) {
     amount = unknownAmount("Valor do SSE não informado.");
+  } else if (!isFiniteNonNegative(input.amountWhenActive)) {
+    amount = unknownAmount("Valor do SSE inválido.");
   } else {
     amount = knownAmount(input.amountWhenActive, {
       origin: "PREMISSA_SIMULACAO",
@@ -252,20 +309,47 @@ export interface RouteCostResult {
   routeId: string;
   components: CostComponent[];
   summary: CostSummary;
+  /** Componentes esperados para a rota que faltam ou estão desconhecidos. */
+  missingKinds: CostComponentKind[];
+  /**
+   * Completude econômica REAL (AJUSTE 5.1): true só quando todos os componentes
+   * esperados foram avaliados (KNOWN ou NOT_APPLICABLE) e nenhum é UNKNOWN.
+   */
+  complete: boolean;
 }
 
 /**
- * Calcula o custo de uma rota a partir dos componentes montados para ela.
- * Aplica a regra estrutural do domínio: qualquer componente desconhecido
- * torna o total indeterminado (null), preservando o subtotal conhecido.
+ * Calcula o custo de uma rota. Além da regra estrutural (UNKNOWN => total null),
+ * verifica os componentes ESPERADOS da rota (AJUSTE 5.1): um componente
+ * esperado ausente ou desconhecido torna o custo incompleto e o total nulo.
  */
 export function computeRouteCost(
   routeId: string,
   components: CostComponent[],
+  requiredKinds: readonly CostComponentKind[] = [],
 ): RouteCostResult {
+  const summary = summarizeCosts(components);
+
+  // Um componente esperado é considerado avaliado quando existe como KNOWN ou
+  // NOT_APPLICABLE. Ausente ou UNKNOWN => faltante.
+  const evaluated = new Set(
+    components
+      .filter((c) => c.amount.status === "KNOWN" || c.amount.status === "NOT_APPLICABLE")
+      .map((c) => c.kind),
+  );
+  const missingKinds = requiredKinds.filter((kind) => !evaluated.has(kind));
+
+  const complete = summary.complete && missingKinds.length === 0;
+
   return {
     routeId,
     components,
-    summary: summarizeCosts(components),
+    summary: {
+      ...summary,
+      complete,
+      total: complete ? summary.knownSubtotal : null,
+    },
+    missingKinds: [...missingKinds],
+    complete,
   };
 }

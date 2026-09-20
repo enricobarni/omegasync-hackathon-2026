@@ -12,7 +12,78 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-19 — após a ETAPA 17 (roadmap concluído).
+Última atualização: 2026-09-19 — rodada final de correções (CORRECAO.md).
+
+---
+
+## 0. Rodada final de correções (CORRECAO.md)
+
+Estados usados aqui: `RESOLVIDA POR CÓDIGO`, `MITIGADA`,
+`BLOQUEADA POR FONTE/PROVEDOR`, `EM USO COMO PREMISSA`.
+
+### Reconciliação das decisões contestadas
+
+- **R06 (restrição × comportamento):** o fator comportamental agora tem estado
+  explícito (`PRESENT/ABSENT/NOT_APPLICABLE/UNKNOWN`) e a liberação é aplicada
+  **por movimento da rota** (não é mais "sempre não bloqueante" de forma global).
+  A avaliação específica por rota depende de a rota carregar `movement`.
+  Estado: **MITIGADA** (extensão por rota operacional segue possível).
+- **R19/R44/R45/R46/R47/R49:** ver abaixo — corrigidos nesta rodada.
+- **R19 — `PREVIA_AO_EMBARQUE`:** modalidade (`state`) separada do cumprimento
+  (`fulfillment`); a existência da exigência não é mais tratada como
+  descumprimento. Estado: **RESOLVIDA POR CÓDIGO**.
+- **R21 — prazos 10/60:** agora carregam `estimateType` (APPROXIMATE /
+  UP_TO_APPROXIMATE); o ~60 dias deixou de ser classificado como pesquisa de
+  campo. Estado: **RESOLVIDA POR CÓDIGO** (valor real: **BLOQUEADO POR FONTE**).
+- **R33 — CIF derivado:** não é mais somado em BRL sem moeda confirmada.
+  Estado: **RESOLVIDA POR CÓDIGO**; valor real **BLOQUEADO POR FONTE/PROVEDOR**.
+- **R44 — Entreposto ≠ recinto:** `ENTREPOSTO_ADUANEIRO` removido de
+  `FacilityType`; virou `CustomsRegime`/habilitação rastreável. A afirmação
+  antiga de "já resolvido na ETAPA 1" estava incorreta. Estado: **RESOLVIDA POR
+  CÓDIGO**.
+- **R45/R46 — evidências:** painel global + **rastreabilidade por saída**
+  implementada (cada regra de elegibilidade e a liberação carregam sua evidência
+  no contrato/UI; dedupe não colapsa evidências distintas; pesquisa de campo só
+  aparece quando o fator está PRESENTE; confiança da fonte chega à `EvidenceView`).
+  Estado da L22: **RESOLVIDA POR CÓDIGO**.
+- **R47 — resiliência Logcomex:** wrappers de timeout/fallback existem, mas a
+  integração **não está ativa** (sem cliente HTTP real; timeout não cancela
+  request real). Estado: infraestrutura preparada, **BLOQUEADA POR PROVEDOR**.
+- **R49 — "restam apenas fontes":** **INCORRETO e removido.** Havia pendências
+  de código (domínio, engine, custos, comparação, API, UI, evidência) tratadas
+  nesta rodada; e ainda restam itens (rastreabilidade por saída, E2E de browser,
+  vários itens MÉDIA/BAIXA e todo o backlog Logcomex dependente de contrato).
+
+### O que foi corrigido nesta rodada (por fase)
+
+- **FASE 1:** contratos fundamentais — `acceptedCargoTypes` rastreável e
+  tri-estado; custo vazio não é completo/zero; entreposto vira regime;
+  restrições com proveniência; catálogo canônico/imutável e operacional×
+  simulação; fator comportamental com estado explícito; invariantes numéricas.
+- **FASE 2:** anuência (modalidade×cumprimento, resolução por atributos/múltiplas
+  entradas, NCM normalizada, prazos aproximados, Portal Único como serviço);
+  DTA participa da elegibilidade; liberação por movimento; janela de 48h exige
+  base de contagem e distingue NOT_APPLICABLE; fonte única da janela.
+- **FASE 3:** completude de custo por componentes esperados; comparação com
+  escopo (COMPLETE/PARTIAL/UNAVAILABLE), empates, UNKNOWN×NOT_APPLICABLE,
+  validação de finitude; Descarga Direta Santos Brasil não consolidada.
+- **FASE 4:** API rejeita tipos inválidos; evidência do usuário identifica o
+  campo; resposta expõe distância/prazo/movimento; OEA sem default; formulário
+  não pergunta a conclusão da janela; aria-invalid; foco do drawer; labels pt-BR.
+- **FASE 6 (parcial):** CIF sem moeda confirmada; fallback não é fonte externa.
+- **FASE 7:** CI (test/typecheck/lint/build), testes de fluxo essenciais,
+  README honesto sobre Logcomex e dados.
+
+### Pendências reais remanescentes (não são só de fonte)
+
+- E2E de browser desktop/mobile (17.1) — pendente (exigiria dependência de
+  runner de browser; há testes de fluxo essenciais no nível de API/serviço);
+- backlog Logcomex grupos B/C e itens de mercado (14.x) — dependem de contrato
+  real do provedor;
+- itens MÉDIA/BAIXA remanescentes de custos/tarifas (4.4, 4.9, 5.2, 5.4, 5.6–
+  5.10, 6.6–6.9) e de UI documental (12.2).
+
+---
 
 ---
 
@@ -270,3 +341,9 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   pontos de review R45–R46 (explicabilidade).
 - **2026-09-19 — ETAPA 17:** pontos de review R47–R49 (resiliência, estados
   vazios, documentação); roadmap do PLANEJAMENTO.md concluído.
+- **2026-09-19 — Rodada final de correções (CORRECAO.md):** aplicadas as
+  FASES 1–7 no que é implementável sem inventar dado/fonte nem depender de
+  contrato externo. Ver a seção "0. Rodada final de correções" para o detalhe e
+  os estados. Itens ainda em aberto: E2E de browser (requer runner/dependência a
+  autorizar) e o backlog Logcomex bloqueado por contrato/credenciais do provedor
+  (grupos C/D) — por isso `CORRECAO.md` é mantido.

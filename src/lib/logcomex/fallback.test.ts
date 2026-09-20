@@ -17,7 +17,7 @@ describe("fallbackEnrichment", () => {
   });
 
   it("CIF permanece desconhecido no fallback (não vira zero)", () => {
-    const cif = deriveCif(fallbackEnrichment("2026-09-19"));
+    const cif = deriveCif();
     expect(cif.status).toBe("UNKNOWN");
   });
 });

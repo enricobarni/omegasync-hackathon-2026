@@ -3,12 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   anuenciaLabel,
   applicabilityLabel,
+  behavioralStateLabel,
   clearanceLabel,
   eligibilityLabel,
   formatCostTotal,
   formatCurrencyBRL,
   formatKnownSubtotal,
-  presenceLabel,
   windowLabel,
 } from "./format";
 
@@ -38,10 +38,11 @@ describe("rótulos", () => {
     expect(applicabilityLabel("NAO_APLICAVEL")).toBe("Não aplicável");
   });
 
-  it("presença de fator: true/false/null", () => {
-    expect(presenceLabel(true)).toBe("Presente");
-    expect(presenceLabel(false)).toBe("Ausente");
-    expect(presenceLabel(null)).toBe("Não informado");
+  it("estado de fator comportamental", () => {
+    expect(behavioralStateLabel("PRESENT")).toBe("Presente");
+    expect(behavioralStateLabel("ABSENT")).toBe("Ausente");
+    expect(behavioralStateLabel("NOT_APPLICABLE")).toBe("Não aplicável");
+    expect(behavioralStateLabel("UNKNOWN")).toBe("Não informado");
   });
 
   it("anuência: resolvida mostra o estado; senão não resolvida", () => {

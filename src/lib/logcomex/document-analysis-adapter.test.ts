@@ -69,7 +69,18 @@ describe("adaptDocumentAnalysis", () => {
     expect(e.fob.status).toBe("UNKNOWN");
     expect(e.origin.status).toBe("UNKNOWN");
     expect(e.items).toEqual([]);
+    // itens ausentes (não enviados) distinto de lista vazia enviada (AJUSTE 11.2)
+    expect(e.itemsProvided).toBe(false);
     expect(e.documentRisks).toEqual([]);
+  });
+
+  it("preserva validação cruzada/divergências do documento (AJUSTE 11.1)", () => {
+    const e = adaptDocumentAnalysis(
+      { validacao_cruzada_campos: { peso: "divergente" }, dados_embarque: { itens: [] } },
+      ACCESSED_AT,
+    );
+    expect(e.crossFieldValidation).toEqual({ peso: "divergente" });
+    expect(e.itemsProvided).toBe(true);
   });
 
   it("normaliza riscos como string única", () => {
@@ -88,22 +99,9 @@ describe("adaptDocumentAnalysis", () => {
   });
 });
 
-describe("deriveCif", () => {
-  it("soma FOB + frete + seguro quando todos conhecidos", () => {
-    const e = adaptDocumentAnalysis(DTO_COMPLETO, ACCESSED_AT);
-    const cif = deriveCif(e);
-    expect(cif.status).toBe("KNOWN");
-    if (isKnown(cif)) {
-      expect(cif.value).toBe(105500);
-    }
-  });
-
-  it("permanece desconhecido quando falta um componente", () => {
-    const e = adaptDocumentAnalysis(
-      { dados_embarque: { valor_fob: 100000, valor_frete: 5000 } },
-      ACCESSED_AT,
-    );
-    expect(deriveCif(e).status).toBe("UNKNOWN");
+describe("deriveCif — moeda não confirmada (R33/LOG-05)", () => {
+  it("não deriva CIF em BRL enquanto a moeda não for confirmada", () => {
+    expect(deriveCif().status).toBe("UNKNOWN");
   });
 });
 
@@ -120,8 +118,8 @@ describe("buildCargoFromEnrichment — ncm_sugerido != ncm_confirmado", () => {
     expect(cargo.ncm).toBe("85287200");
     // a sugestão do Logcomex era 84713012 — não foi promovida
     expect(cargo.ncm).not.toBe("84713012");
-    // CIF derivado do enriquecimento
-    expect(isKnown(cargo.cif) && cargo.cif.value).toBe(105500);
+    // CIF NÃO é derivado em BRL sem moeda confirmada (R33)
+    expect(cargo.cif.status).toBe("UNKNOWN");
   });
 
   it("usa o CIF informado quando fornecido", () => {

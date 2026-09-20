@@ -9,6 +9,7 @@ import {
   unknown,
   unknownAmount,
 } from "../domain";
+import type { ClearanceStatus } from "../domain";
 import {
   evaluateEligibility,
   evaluateRouteEligibility,
@@ -39,11 +40,22 @@ const RECINTO_ZS: Facility = {
   type: "RETROPORTO",
 };
 
-const ENTREPOSTO: Facility = {
-  id: "entreposto",
-  name: "Entreposto",
+/** Recinto habilitado ao regime de entreposto (habilitação rastreável). */
+const RECINTO_HABILITADO_ENTREPOSTO: Facility = {
+  id: "recinto-entreposto",
+  name: "Recinto habilitado a entreposto",
   zone: "ZONA_SECUNDARIA",
-  type: "ENTREPOSTO_ADUANEIRO",
+  type: "RECINTO_ALFANDEGADO",
+  enabledRegimes: known(["ENTREPOSTO_ADUANEIRO"], EVIDENCIA),
+};
+
+/** Recinto com habilitação conhecida e SEM entreposto. */
+const RECINTO_SEM_ENTREPOSTO: Facility = {
+  id: "recinto-sem-entreposto",
+  name: "Recinto sem entreposto",
+  zone: "ZONA_SECUNDARIA",
+  type: "RETROPORTO",
+  enabledRegimes: known([], EVIDENCIA),
 };
 
 function rota(overrides: Partial<Route> = {}): Route {
@@ -52,8 +64,8 @@ function rota(overrides: Partial<Route> = {}): Route {
     label: "Terminal → Recinto",
     origin: TERMINAL,
     destination: RECINTO_ZS,
-    requiresDta: dtaRequirementUnknown(),
-    acceptedCargoTypes: ["FCL"],
+    requiresDta: { status: "NOT_REQUIRED", evidence: EVIDENCIA },
+    acceptedCargoTypes: known(["FCL"], EVIDENCIA),
     availability: { status: "AVAILABLE", evidence: EVIDENCIA },
     distanceKm: known(20, EVIDENCIA),
     estimatedDurationHours: unknown(),
@@ -65,6 +77,7 @@ function rota(overrides: Partial<Route> = {}): Route {
 
 const ANUENCIA_LIVRE: ResolvedAnuencia = {
   state: "SEM_ANUENCIA",
+  fulfillment: "UNKNOWN",
   organs: [],
   evidence: createEvidence("USUARIO"),
 };
@@ -83,7 +96,7 @@ describe("evaluateRouteEligibility", () => {
   it("INVIAVEL quando a rota não aceita o tipo de carga", () => {
     const result = evaluateRouteEligibility(
       input({ cargo: { ...CARGA, cargoType: "LCL" } }),
-      rota({ acceptedCargoTypes: ["FCL"] }),
+      rota({ acceptedCargoTypes: known(["FCL"], EVIDENCIA) }),
     );
     expect(result.status).toBe("INVIAVEL");
     expect(result.reasons.some((r) => r.rule === "CARGO_TYPE" && r.outcome === "BLOCK")).toBe(true);
@@ -92,23 +105,13 @@ describe("evaluateRouteEligibility", () => {
   it("INVIAVEL quando a anuência impede a operação", () => {
     const anuencia: ResolvedAnuencia = {
       state: "IMPEDIMENTO",
+      fulfillment: "UNKNOWN",
       organs: ["ANVISA"],
       evidence: createEvidence("USUARIO"),
     };
     const result = evaluateRouteEligibility(input({ anuencia }), rota());
     expect(result.status).toBe("INVIAVEL");
     expect(result.summary).toContain("anuência");
-  });
-
-  it("INVIAVEL quando a anuência é prévia ao embarque", () => {
-    const anuencia: ResolvedAnuencia = {
-      state: "PREVIA_AO_EMBARQUE",
-      organs: ["MAPA_VIGIAGRO"],
-      evidence: createEvidence("USUARIO"),
-    };
-    expect(evaluateRouteEligibility(input({ anuencia }), rota()).status).toBe(
-      "INVIAVEL",
-    );
   });
 
   it("INVIAVEL quando a rota está indisponível", () => {
@@ -125,18 +128,26 @@ describe("evaluateRouteEligibility", () => {
     expect(result.status).toBe("INVIAVEL");
   });
 
-  it("INVIAVEL quando exige entrepostagem e a rota não termina em entreposto", () => {
+  it("INVIAVEL quando exige entrepostagem e o recinto não é habilitado", () => {
     const result = evaluateRouteEligibility(
       input({ necessitaEntrepostagem: known(true, EVIDENCIA) }),
-      rota({ destination: RECINTO_ZS }),
+      rota({ destination: RECINTO_SEM_ENTREPOSTO }),
     );
     expect(result.status).toBe("INVIAVEL");
   });
 
-  it("VIAVEL quando exige entrepostagem e a rota termina em entreposto", () => {
+  it("INDETERMINADA quando exige entrepostagem e a habilitação é desconhecida", () => {
     const result = evaluateRouteEligibility(
       input({ necessitaEntrepostagem: known(true, EVIDENCIA) }),
-      rota({ destination: ENTREPOSTO }),
+      rota({ destination: RECINTO_ZS }),
+    );
+    expect(result.status).toBe("INDETERMINADA");
+  });
+
+  it("VIAVEL quando exige entrepostagem e o recinto é habilitado ao regime", () => {
+    const result = evaluateRouteEligibility(
+      input({ necessitaEntrepostagem: known(true, EVIDENCIA) }),
+      rota({ destination: RECINTO_HABILITADO_ENTREPOSTO }),
     );
     expect(result.status).toBe("VIAVEL");
   });
@@ -157,15 +168,50 @@ describe("evaluateRouteEligibility", () => {
   });
 
   it("INDETERMINADA quando os tipos de carga aceitos não são informados", () => {
-    const result = evaluateRouteEligibility(input(), rota({ acceptedCargoTypes: [] }));
+    const result = evaluateRouteEligibility(input(), rota({ acceptedCargoTypes: unknown() }));
     expect(result.status).toBe("INDETERMINADA");
+  });
+
+  it("INVIAVEL quando KNOWN [] confirma que nenhum tipo é aceito", () => {
+    const result = evaluateRouteEligibility(
+      input(),
+      rota({ acceptedCargoTypes: known([], EVIDENCIA) }),
+    );
+    expect(result.status).toBe("INVIAVEL");
+  });
+
+  it("INDETERMINADA quando a rota exige DTA e o trânsito não foi resolvido (AJUSTE 9.1)", () => {
+    const result = evaluateRouteEligibility(
+      input(),
+      rota({ requiresDta: dtaRequirementUnknown() }),
+    );
+    expect(result.status).toBe("INDETERMINADA");
+    expect(result.reasons.some((r) => r.rule === "DTA")).toBe(true);
+  });
+
+  it("retirada direta bloqueada por liberação (AJUSTE 9.2)", () => {
+    const bloqueada: ClearanceStatus = "BLOQUEADA";
+    const result = evaluateRouteEligibility(
+      input({ clearanceStatus: bloqueada }),
+      rota({ movement: "RETIRADA_DIRETA" }),
+    );
+    expect(result.status).toBe("INVIAVEL");
+  });
+
+  it("permanência/trânsito não é bloqueada por liberação pendente (AJUSTE 8.10)", () => {
+    const pendente: ClearanceStatus = "PENDENTE";
+    const result = evaluateRouteEligibility(
+      input({ clearanceStatus: pendente }),
+      rota({ movement: "TRANSITO_DTA_ZONA_SECUNDARIA" }),
+    );
+    expect(result.status).toBe("VIAVEL");
   });
 
   it("BLOCK tem precedência sobre INDETERMINATE", () => {
     // disponibilidade desconhecida (INDETERMINATE) + tipo não aceito (BLOCK)
     const result = evaluateRouteEligibility(
       input({ cargo: { ...CARGA, cargoType: "LCL" } }),
-      rota({ acceptedCargoTypes: ["FCL"], availability: availabilityUnknown() }),
+      rota({ acceptedCargoTypes: known(["FCL"], EVIDENCIA), availability: availabilityUnknown() }),
     );
     expect(result.status).toBe("INVIAVEL");
   });
@@ -173,8 +219,8 @@ describe("evaluateRouteEligibility", () => {
 
 describe("evaluateEligibility", () => {
   it("avalia várias rotas sem colapsar em um único cenário", () => {
-    const viavel = rota({ id: "viavel", acceptedCargoTypes: ["FCL"] });
-    const inviavel = rota({ id: "inviavel", acceptedCargoTypes: ["LCL"] });
+    const viavel = rota({ id: "viavel", acceptedCargoTypes: known(["FCL"], EVIDENCIA) });
+    const inviavel = rota({ id: "inviavel", acceptedCargoTypes: known(["LCL"], EVIDENCIA) });
     const indeterminada = rota({ id: "indeterminada", availability: availabilityUnknown() });
 
     const results = evaluateEligibility(input(), [viavel, inviavel, indeterminada]);

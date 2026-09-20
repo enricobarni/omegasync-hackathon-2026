@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BASELINE_CATALOG } from "../catalog";
+import { DEMO_CATALOG } from "../catalog";
 import type { Cargo, Facility, Route } from "../domain";
 import { createEvidence, known } from "../domain";
 import { buildStorageComponent } from "../engine";
@@ -35,8 +35,8 @@ const ROTA_VIAVEL: Route = {
   label: "Terminal → Recinto",
   origin: TERMINAL,
   destination: RECINTO,
-  requiresDta: { status: "REQUIRED", evidence: EVID },
-  acceptedCargoTypes: ["FCL"],
+  requiresDta: { status: "NOT_REQUIRED", evidence: EVID },
+  acceptedCargoTypes: known(["FCL"], EVID),
   availability: { status: "AVAILABLE", evidence: EVID },
   distanceKm: known(20, EVID),
   estimatedDurationHours: known(8, EVID),
@@ -45,7 +45,7 @@ const ROTA_VIAVEL: Route = {
 };
 
 const REGISTRO_LIVRE: AnuenciaRegistryEntry[] = [
-  { ncm: "84713012", state: "AUTOMATICA", organs: [], evidence: EVID },
+  { ncm: "84713012", state: "SEM_ANUENCIA", organs: [], evidence: EVID },
 ];
 
 const DP_WORLD_RATES = {
@@ -59,7 +59,7 @@ describe("runSimulation — baseline honesto", () => {
   it("com registro vazio, anuência não resolvida e liberação indeterminada", () => {
     const result = runSimulation({
       cargo: CARGA,
-      routes: BASELINE_CATALOG.routes,
+      routes: DEMO_CATALOG.routes,
     });
 
     expect(result.anuencia.status).toBe("NOT_FOUND");
@@ -91,6 +91,7 @@ describe("runSimulation — rota viável com dados", () => {
       },
       window48h: {
         cargoYardWithdrawal: known(true, EVID),
+        facilityDiscriminatedInSchedule: known(true, EVID),
         withinBusinessWindow: known(true, EVID),
       },
     });
@@ -101,7 +102,7 @@ describe("runSimulation — rota viável com dados", () => {
     expect(result.routes[0].cost.summary.complete).toBe(true);
     expect(result.routes[0].cost.summary.total).toBe(1900);
     expect(result.comparison.viable).toEqual(["rota-viavel"]);
-    expect(result.comparison.cost.lowest).toEqual({ routeId: "rota-viavel", value: 1900 });
+    expect(result.comparison.costTotal.lowest).toEqual({ routeIds: ["rota-viavel"], value: 1900 });
     expect(result.window48h.viability).toBe("VIAVEL");
   });
 
@@ -115,7 +116,7 @@ describe("runSimulation — rota viável com dados", () => {
 
     expect(result.behavioralFactors.length).toBeGreaterThan(0);
     const estrutura = result.behavioralFactors.find((f) => f.kind === "ESTRUTURA");
-    expect(estrutura?.present).toBe(true);
+    expect(estrutura?.state).toBe("PRESENT");
     expect(result.evidences.length).toBeGreaterThan(0);
   });
 });

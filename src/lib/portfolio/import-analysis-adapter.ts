@@ -7,13 +7,8 @@
  * `scope: "MARKET_AGGREGATE"` e o módulo não alimenta o motor de simulação.
  */
 
-import type {
-  Evidence,
-  MonetaryAmount,
-  SourceReference,
-  TrackedValue,
-} from "../domain";
-import { known, knownAmount, unknown, unknownAmount } from "../domain";
+import type { Evidence, SourceReference, TrackedValue } from "../domain";
+import { known, unknown } from "../domain";
 import type {
   LogcomexImportAnalysisDTO,
   LogcomexImportRowDTO,
@@ -27,9 +22,11 @@ export interface MarketImportRow {
   ncm: TrackedValue<string>;
   entryPort: TrackedValue<string>;
   quantity: TrackedValue<number>;
-  fobTotal: MonetaryAmount;
-  fobUnit: MonetaryAmount;
-  freightTotal: MonetaryAmount;
+  // Valores numéricos crus (AJUSTE 14.1): a MOEDA não está confirmada, então
+  // NÃO são promovidos a MonetaryAmount/BRL.
+  fobTotal: TrackedValue<number>;
+  fobUnit: TrackedValue<number>;
+  freightTotal: TrackedValue<number>;
 }
 
 export interface MarketImportAnalysis {
@@ -37,6 +34,10 @@ export interface MarketImportAnalysis {
   source: SourceReference;
   /** Agregado de mercado — nunca substitui a carga individual. */
   scope: "MARKET_AGGREGATE";
+  /** false: moeda dos valores não confirmada (AJUSTE 14.1). */
+  currencyConfirmed: false;
+  /** false quando `linhas` não veio na resposta (distinto de zero registros — AJUSTE 14.2). */
+  rowsProvided: boolean;
 }
 
 /** Converte number|string em número finito ou null (sem adivinhar locale). */
@@ -64,13 +65,6 @@ function trackNumber(value: unknown, evidence: Evidence): TrackedValue<number> {
     : known(parsed, evidence);
 }
 
-function trackMoney(value: unknown, evidence: Evidence): MonetaryAmount {
-  const parsed = parseNumber(value);
-  return parsed === null
-    ? unknownAmount("Valor monetário não fornecido.")
-    : knownAmount(parsed, evidence);
-}
-
 export function importAnalysisSource(accessedAt: string): SourceReference {
   return {
     id: "logcomex-brasil-analise-importacoes",
@@ -93,9 +87,9 @@ function adaptRow(
     ncm: trackString(row.ncm, evidence),
     entryPort: trackString(row.porto_entrada, evidence),
     quantity: trackNumber(row.quantidade, evidence),
-    fobTotal: trackMoney(row.fob_total, evidence),
-    fobUnit: trackMoney(row.fob_unitario, evidence),
-    freightTotal: trackMoney(row.frete_total, evidence),
+    fobTotal: trackNumber(row.fob_total, evidence),
+    fobUnit: trackNumber(row.fob_unitario, evidence),
+    freightTotal: trackNumber(row.frete_total, evidence),
   };
 }
 
@@ -114,5 +108,7 @@ export function adaptImportAnalysis(
     rows: (dto.linhas ?? []).map((row) => adaptRow(row, evidence)),
     source,
     scope: "MARKET_AGGREGATE",
+    currencyConfirmed: false,
+    rowsProvided: Array.isArray(dto.linhas),
   };
 }

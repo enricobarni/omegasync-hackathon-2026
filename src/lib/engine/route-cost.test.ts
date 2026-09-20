@@ -108,14 +108,79 @@ describe("construtores de componente", () => {
     expect(capital.amount.status).toBe("KNOWN");
   });
 
-  it("SSE: OFF => não aplicável; ON sem valor => desconhecido", () => {
-    expect(buildSseComponent({ active: false, amountWhenActive: null }).amount.status).toBe(
-      "NOT_APPLICABLE",
-    );
+  it("SSE: OFF => premissa de valor 0 (não N/A factual); ON sem valor => desconhecido", () => {
+    const off = buildSseComponent({ active: false, amountWhenActive: null });
+    expect(off.amount.status).toBe("KNOWN");
+    if (off.amount.status === "KNOWN") {
+      expect(off.amount.value).toBe(0);
+      expect(off.amount.evidence.origin).toBe("PREMISSA_SIMULACAO");
+    }
     expect(buildSseComponent({ active: true, amountWhenActive: null }).amount.status).toBe(
       "UNKNOWN",
     );
     expect(buildSseComponent({ active: true, amountWhenActive: 200 }).amount.status).toBe("KNOWN");
+  });
+});
+
+describe("invariantes numéricas dos construtores (AJUSTE 5.5)", () => {
+  it("entradas inválidas (negativo/Infinity/NaN) viram desconhecido, não NaN/negativo", () => {
+    expect(
+      buildStorageComponent({ cif: -1, daysOfStay: 5, rates: DP_WORLD_RATES, evidence: EVID })
+        .amount.status,
+    ).toBe("UNKNOWN");
+    expect(
+      buildTransportComponent({ distanceKm: Infinity, costPerKm: 5, reference: "x" })
+        .amount.status,
+    ).toBe("UNKNOWN");
+    expect(
+      buildDirectDischargeComponent({ cif: Number.NaN, rate: 0.0054, minimumValue: null, evidence: EVID })
+        .amount.status,
+    ).toBe("UNKNOWN");
+    expect(
+      buildCapitalComponent({
+        taxableAmount: 1000,
+        daysAnticipated: 10,
+        monthlyRate: 0.01,
+        monthDays: 0,
+        reference: "x",
+      }).amount.status,
+    ).toBe("UNKNOWN");
+    expect(
+      buildSseComponent({ active: true, amountWhenActive: -5 }).amount.status,
+    ).toBe("UNKNOWN");
+  });
+});
+
+describe("computeRouteCost — componentes esperados (AJUSTE 5.1)", () => {
+  it("conjunto vazio não é completo", () => {
+    const r = computeRouteCost("rota", []);
+    expect(r.complete).toBe(false);
+    expect(r.summary.total).toBeNull();
+  });
+
+  it("componente esperado ausente torna o custo incompleto", () => {
+    const r = computeRouteCost(
+      "rota",
+      [buildStorageComponent({ cif: 100_000, daysOfStay: 5, rates: DP_WORLD_RATES, evidence: EVID })],
+      ["ARMAZENAGEM", "DTA"],
+    );
+    expect(r.missingKinds).toContain("DTA");
+    expect(r.complete).toBe(false);
+    expect(r.summary.total).toBeNull();
+  });
+
+  it("todos os esperados avaliados (KNOWN/NOT_APPLICABLE) => completo", () => {
+    const r = computeRouteCost(
+      "rota",
+      [
+        buildStorageComponent({ cif: 100_000, daysOfStay: 5, rates: DP_WORLD_RATES, evidence: EVID }),
+        buildSseComponent({ active: false, amountWhenActive: null }),
+      ],
+      ["ARMAZENAGEM", "SSE"],
+    );
+    expect(r.missingKinds).toEqual([]);
+    expect(r.complete).toBe(true);
+    expect(r.summary.total).toBe(1900);
   });
 });
 

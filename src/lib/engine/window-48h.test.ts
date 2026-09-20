@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createEvidence, known } from "../domain";
+import { createEvidence, known, notApplicable } from "../domain";
 import {
   WINDOW_48H_RULE,
   assessWindow48h,
@@ -58,6 +58,7 @@ describe("assessWindow48h — aplicabilidade antes da viabilidade", () => {
     const r = assessWindow48h(
       ctx({
         cargoYardWithdrawal: known(true, EVID),
+        facilityDiscriminatedInSchedule: known(true, EVID),
         withinBusinessWindow: known(false, EVID),
       }),
     );
@@ -70,13 +71,38 @@ describe("assessWindow48h — aplicabilidade antes da viabilidade", () => {
       expect(e.origin).toBe("PESQUISA_CAMPO");
       expect(e.confidence).toBe("N1");
     }
+    // inputs conhecidos são preservados como evidência (AJUSTE 7.4)
+    expect(r.inputEvidence.length).toBeGreaterThan(0);
+    expect(r.ruleSources.length).toBeGreaterThan(0);
   });
 
   it("APLICAVEL e viabilidade INDETERMINADA quando a janela não é informada", () => {
-    const r = assessWindow48h(ctx({ cargoYardWithdrawal: known(true, EVID) }));
+    const r = assessWindow48h(
+      ctx({
+        cargoYardWithdrawal: known(true, EVID),
+        facilityDiscriminatedInSchedule: known(true, EVID),
+      }),
+    );
     expect(r.applicability).toBe("APLICAVEL");
     expect(r.viability).toBe("INDETERMINADO");
     expect(r.missingData.some((m) => m.includes("48h úteis"))).toBe(true);
+  });
+
+  it("base desconhecida => INDETERMINADO mesmo com withinBusinessWindow conhecido (AJUSTE 7.2)", () => {
+    const r = assessWindow48h(
+      ctx({
+        cargoYardWithdrawal: known(true, EVID),
+        withinBusinessWindow: known(true, EVID),
+      }),
+    );
+    expect(r.applicability).toBe("APLICAVEL");
+    expect(r.viability).toBe("INDETERMINADO");
+    expect(r.countingBasis).toBeNull();
+  });
+
+  it("carga-pátio NOT_APPLICABLE => NAO_APLICAVEL, distinto de UNKNOWN (AJUSTE 7.3)", () => {
+    const r = assessWindow48h(ctx({ cargoYardWithdrawal: notApplicable() }));
+    expect(r.applicability).toBe("NAO_APLICAVEL");
   });
 
   it("base de contagem varia com recinto discriminado no agendamento", () => {

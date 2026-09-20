@@ -16,9 +16,9 @@ import {
   known,
   unknownAmount,
 } from "../domain";
-import type { Window48hContext } from "../engine";
+import type { ComparableDimension, Window48hContext } from "../engine";
 import type { SimulationResult } from "../application";
-import { toEvidenceViews } from "../evidence";
+import { toEvidenceView, toEvidenceViews } from "../evidence";
 import type { EvidenceView } from "../evidence";
 
 // --- Contrato de requisição ----------------------------------------------
@@ -33,12 +33,12 @@ export interface SimulationRequestDTO {
   };
   operation?: {
     necessitaEntrepostagem?: boolean | null;
+    /** Sinal FACTUAL: a operação é de carga-pátio (retirada direta)? */
     cargoYardWithdrawal?: boolean | null;
+    /** Sinal FACTUAL: há recinto discriminado no agendamento? */
     facilityDiscriminatedInSchedule?: boolean | null;
-    withinBusinessWindow?: boolean | null;
     possuiCaixaParaAntecipacao?: boolean | null;
     possuiEstruturaSincronizada?: boolean | null;
-    janela48hViavel?: boolean | null;
   };
 }
 
@@ -49,7 +49,6 @@ export interface NormalizedSimulationRequest {
   behavioral?: {
     possuiCaixaParaAntecipacao?: TrackedValue<boolean>;
     possuiEstruturaSincronizada?: TrackedValue<boolean>;
-    janela48hViavel?: TrackedValue<boolean>;
   };
   window48h?: Window48hContext;
 }
@@ -62,13 +61,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-const USER_EVIDENCE = createEvidence("USUARIO");
+/** Evidência do usuário identificando o campo de origem (AJUSTE 10.4). */
+function userFieldEvidence(field: string) {
+  return createEvidence("USUARIO", { reference: `Informado pelo usuário: ${field}` });
+}
 
+/** Converte boolean|null|undefined em TrackedValue; ignora ausência. */
 function boolToTracked(
   value: unknown,
+  field: string,
 ): TrackedValue<boolean> | undefined {
-  return typeof value === "boolean" ? known(value, USER_EVIDENCE) : undefined;
+  return typeof value === "boolean"
+    ? known(value, userFieldEvidence(field))
+    : undefined;
 }
+
+const BOOLEAN_OPERATION_FIELDS = [
+  "necessitaEntrepostagem",
+  "cargoYardWithdrawal",
+  "facilityDiscriminatedInSchedule",
+  "possuiCaixaParaAntecipacao",
+  "possuiEstruturaSincronizada",
+] as const;
 
 /**
  * Valida e normaliza a requisição. Erros de formato retornam a lista de
@@ -110,48 +124,67 @@ export function validateSimulationRequest(body: unknown): ValidationResult {
     errors.push("cargo.cif, quando informado, deve ser um número >= 0.");
   }
 
-  if (body.operation !== undefined && !isRecord(body.operation)) {
+  const operationValid = body.operation === undefined || isRecord(body.operation);
+  if (!operationValid) {
     errors.push("operation, quando informado, deve ser um objeto.");
+  }
+
+  // AJUSTE 10.3: campos operacionais com tipo inválido são REJEITADOS, não
+  // silenciosamente convertidos em "não informado".
+  const operation = isRecord(body.operation) ? body.operation : {};
+  for (const field of BOOLEAN_OPERATION_FIELDS) {
+    const v = operation[field];
+    if (v !== undefined && v !== null && typeof v !== "boolean") {
+      errors.push(`operation.${field}, quando informado, deve ser booleano.`);
+    }
   }
 
   if (errors.length > 0) {
     return { ok: false, errors };
   }
 
-  const operation = isRecord(body.operation) ? body.operation : {};
-
   const normalizedCargo: Cargo = {
     ncm: ncm as string,
     cif:
       typeof cargo.cif === "number"
-        ? known(cargo.cif, USER_EVIDENCE)
+        ? known(cargo.cif, userFieldEvidence("cargo.cif"))
         : unknownAmount("CIF não informado."),
     cargoType: cargoType as Cargo["cargoType"],
     oeaStatus: oeaStatus as Cargo["oeaStatus"],
     channel: channel as Cargo["channel"],
   };
 
+  // A viabilidade da janela (withinBusinessWindow) NÃO é perguntada ao usuário
+  // (AJUSTE 12.4): é conclusão que o motor deveria calcular. A UI informa
+  // apenas sinais factuais; a janela fica indeterminada sem fonte operacional.
   const window48h: Window48hContext = {
-    cargoYardWithdrawal: boolToTracked(operation.cargoYardWithdrawal),
+    cargoYardWithdrawal: boolToTracked(
+      operation.cargoYardWithdrawal,
+      "operation.cargoYardWithdrawal",
+    ),
     facilityDiscriminatedInSchedule: boolToTracked(
       operation.facilityDiscriminatedInSchedule,
+      "operation.facilityDiscriminatedInSchedule",
     ),
-    withinBusinessWindow: boolToTracked(operation.withinBusinessWindow),
   };
 
   return {
     ok: true,
     value: {
       cargo: normalizedCargo,
-      necessitaEntrepostagem: boolToTracked(operation.necessitaEntrepostagem),
+      necessitaEntrepostagem: boolToTracked(
+        operation.necessitaEntrepostagem,
+        "operation.necessitaEntrepostagem",
+      ),
       behavioral: {
         possuiCaixaParaAntecipacao: boolToTracked(
           operation.possuiCaixaParaAntecipacao,
+          "operation.possuiCaixaParaAntecipacao",
         ),
         possuiEstruturaSincronizada: boolToTracked(
           operation.possuiEstruturaSincronizada,
+          "operation.possuiEstruturaSincronizada",
         ),
-        janela48hViavel: boolToTracked(operation.janela48hViavel),
       },
       window48h,
     },
@@ -160,31 +193,94 @@ export function validateSimulationRequest(body: unknown): ValidationResult {
 
 // --- Contrato de resposta -------------------------------------------------
 
+/** Valor numérico rastreável no contrato público (status + valor). */
+export interface TrackedNumberDTO {
+  status: string;
+  value: number | null;
+}
+
+/** Dimensão comparável no contrato público (AJUSTE 6.1/10.1): escopo explícito. */
+export interface ComparisonDimensionDTO {
+  status: string;
+  /** Vencedor(es) — vários ids indicam empate (AJUSTE 6.3). */
+  lowestRouteIds: string[];
+  lowestValue: number | null;
+  fullyComparable: boolean;
+}
+
+/** Motivo auditável de uma regra de elegibilidade (afirmação → evidência). */
+export interface EligibilityReasonDTO {
+  rule: string;
+  outcome: string;
+  detail: string;
+  evidence: EvidenceView | null;
+}
+
 export interface SimulationResponseDTO {
-  clearance: { status: string; reasons: string[]; missingData: string[] };
+  clearance: {
+    status: string;
+    reasons: string[];
+    missingData: string[];
+    evidences: EvidenceView[];
+  };
   anuencia: { status: string; state: string | null };
   routes: Array<{
     routeId: string;
     label: string;
-    eligibility: { status: string; summary: string; missingData: string[] };
-    cost: { knownSubtotal: number; total: number | null; complete: boolean };
+    movement: string;
+    eligibility: {
+      status: string;
+      summary: string;
+      missingData: string[];
+      /** Cada regra com sua evidência (rastreabilidade por saída, AJUSTE 16.1). */
+      reasons: EligibilityReasonDTO[];
+    };
+    cost: {
+      knownSubtotal: number;
+      total: number | null;
+      complete: boolean;
+      missingKinds: string[];
+    };
+    /** Distância e prazo — dimensões centrais do produto (AJUSTE 10.8). */
+    distanceKm: TrackedNumberDTO;
+    estimatedDurationHours: TrackedNumberDTO;
   }>;
   comparison: {
     viable: string[];
     indeterminate: string[];
     inviable: string[];
-    lowestCostRouteId: string | null;
-    lowestDistanceRouteId: string | null;
-    lowestDurationRouteId: string | null;
+    costTotal: ComparisonDimensionDTO;
+    costKnownSubtotal: ComparisonDimensionDTO;
+    distance: ComparisonDimensionDTO;
+    duration: ComparisonDimensionDTO;
   };
   window48h: { applicability: string; viability: string | null };
   behavioralFactors: Array<{
     kind: string;
-    present: boolean | null;
+    state: string;
+    detail: string;
     tendency?: string;
   }>;
   evidences: EvidenceView[];
   missingData: string[];
+}
+
+function toTrackedNumber(value: TrackedValue<number>): TrackedNumberDTO {
+  return {
+    status: value.status,
+    value: value.status === "KNOWN" ? value.value : null,
+  };
+}
+
+function toComparisonDimension(
+  dimension: ComparableDimension,
+): ComparisonDimensionDTO {
+  return {
+    status: dimension.status,
+    lowestRouteIds: dimension.lowest?.routeIds ?? [],
+    lowestValue: dimension.lowest?.value ?? null,
+    fullyComparable: dimension.fullyComparable,
+  };
 }
 
 /** Mapeia o resultado interno para o contrato público estável. */
@@ -196,6 +292,7 @@ export function toSimulationResponse(
       status: result.clearance.status,
       reasons: result.clearance.reasons,
       missingData: result.clearance.missingData,
+      evidences: toEvidenceViews(result.clearance.evidence),
     },
     anuencia: {
       status: result.anuencia.status,
@@ -207,24 +304,35 @@ export function toSimulationResponse(
     routes: result.routes.map((sim) => ({
       routeId: sim.route.id,
       label: sim.route.label,
+      movement: sim.route.movement ?? "OUTRO",
       eligibility: {
         status: sim.eligibility.status,
         summary: sim.eligibility.summary,
         missingData: sim.eligibility.missingData,
+        reasons: sim.eligibility.reasons.map((r) => ({
+          rule: r.rule,
+          outcome: r.outcome,
+          detail: r.detail,
+          evidence: r.evidence ? toEvidenceView(r.evidence) : null,
+        })),
       },
       cost: {
         knownSubtotal: sim.cost.summary.knownSubtotal,
         total: sim.cost.summary.total,
-        complete: sim.cost.summary.complete,
+        complete: sim.cost.complete,
+        missingKinds: sim.cost.missingKinds,
       },
+      distanceKm: toTrackedNumber(sim.route.distanceKm),
+      estimatedDurationHours: toTrackedNumber(sim.route.estimatedDurationHours),
     })),
     comparison: {
       viable: result.comparison.viable,
       indeterminate: result.comparison.indeterminate,
       inviable: result.comparison.inviable,
-      lowestCostRouteId: result.comparison.cost.lowest?.routeId ?? null,
-      lowestDistanceRouteId: result.comparison.distance.lowest?.routeId ?? null,
-      lowestDurationRouteId: result.comparison.duration.lowest?.routeId ?? null,
+      costTotal: toComparisonDimension(result.comparison.costTotal),
+      costKnownSubtotal: toComparisonDimension(result.comparison.costKnownSubtotal),
+      distance: toComparisonDimension(result.comparison.distance),
+      duration: toComparisonDimension(result.comparison.duration),
     },
     window48h: {
       applicability: result.window48h.applicability,
@@ -232,7 +340,8 @@ export function toSimulationResponse(
     },
     behavioralFactors: result.behavioralFactors.map((factor) => ({
       kind: factor.kind,
-      present: factor.present,
+      state: factor.state,
+      detail: factor.detail,
       tendency: factor.tendency,
     })),
     evidences: toEvidenceViews(result.evidences),

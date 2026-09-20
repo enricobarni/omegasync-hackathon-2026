@@ -13,7 +13,7 @@ export function trackingFallbackSource(accessedAt: string): SourceReference {
     title: "Fallback offline (tracking Logcomex indisponível)",
     publisher: "OmegaSync",
     accessedAt,
-    kind: "EXTERNAL_API",
+    kind: "INTERNAL_FALLBACK",
   };
 }
 

@@ -16,7 +16,7 @@
  */
 
 import type { Evidence, SourceReference, TrackedValue } from "../domain";
-import { createEvidence, isKnown } from "../domain";
+import { createEvidence, isKnown, isNotApplicable } from "../domain";
 
 // --- Fontes regulatórias (FONTES.md §15) ---------------------------------
 
@@ -134,13 +134,29 @@ export interface Window48hAssessment {
   /** Consequência quando a janela é excedida (INVIAVEL). */
   consequenceIfExceeded: string | null;
   missingData: string[];
+  /** Evidência dos inputs conhecidos que sustentam a conclusão (AJUSTE 7.4). */
+  inputEvidence: Evidence[];
+  /** Fontes regulatórias da regra (AJUSTE 7.4/7.7). */
+  ruleSources: SourceReference[];
+  /** Evidência de campo (E28/E31) quando a janela é excedida. */
   evidence: Evidence[];
 }
 
+/**
+ * Resolve aplicabilidade distinguindo NOT_APPLICABLE de UNKNOWN (AJUSTE 7.3):
+ * carga-pátio KNOWN(true) => APLICAVEL; KNOWN(false) ou NOT_APPLICABLE =>
+ * NAO_APLICAVEL; UNKNOWN/ausente => INDETERMINADO.
+ */
 function resolveApplicability(
   flag: TrackedValue<boolean> | undefined,
 ): Window48hApplicability {
-  if (!flag || !isKnown(flag)) {
+  if (!flag) {
+    return "INDETERMINADO";
+  }
+  if (isNotApplicable(flag)) {
+    return "NAO_APLICAVEL";
+  }
+  if (!isKnown(flag)) {
     return "INDETERMINADO";
   }
   return flag.value ? "APLICAVEL" : "NAO_APLICAVEL";
@@ -156,70 +172,81 @@ export function assessWindow48h(
   const applicability = resolveApplicability(context.cargoYardWithdrawal);
   const missingData: string[] = [];
   const evidence: Evidence[] = [];
+  const inputEvidence = collectInputEvidence(context);
+  const ruleSources = [...WINDOW_48H_RULE.sources];
 
-  if (applicability === "INDETERMINADO") {
-    missingData.push(
-      "Não informado se a operação é de carga-pátio (retirada direta).",
-    );
-    return {
-      applicability,
-      viability: null,
-      countingBasis: null,
-      consequenceIfExceeded: null,
-      missingData,
-      evidence,
-    };
-  }
-
-  if (applicability === "NAO_APLICAVEL") {
-    return {
-      applicability,
-      viability: null,
-      countingBasis: null,
-      consequenceIfExceeded: null,
-      missingData,
-      evidence,
-    };
-  }
-
-  // APLICAVEL: define base de contagem e avalia viabilidade.
-  let countingBasis: string | null;
-  const discriminated = context.facilityDiscriminatedInSchedule;
-  if (discriminated && isKnown(discriminated)) {
-    countingBasis = discriminated.value
-      ? WINDOW_48H_RULE.countingFromYardArrival
-      : WINDOW_48H_RULE.countingWhenNoFacilityDiscriminated;
-  } else {
-    countingBasis = null;
-    missingData.push(
-      "Não informado se há recinto discriminado no agendamento (base de contagem).",
-    );
-  }
-
-  const within = context.withinBusinessWindow;
-  let viability: Window48hViability;
-  let consequenceIfExceeded: string | null = null;
-
-  if (!within || !isKnown(within)) {
-    viability = "INDETERMINADO";
-    missingData.push(
-      "Não informado se a retirada é viável dentro das 48h úteis.",
-    );
-  } else if (within.value) {
-    viability = "VIAVEL";
-  } else {
-    viability = "INVIAVEL";
-    consequenceIfExceeded = WINDOW_48H_RULE.consequenceIfExceeded;
-    // Evidência de campo sobre a perda da janela (custo não capturado).
-    evidence.push(EVID_E28_JANELA, EVID_E31_JANELA);
-  }
-
-  return {
+  const base = (
+    viability: Window48hViability | null,
+    countingBasis: string | null,
+    consequenceIfExceeded: string | null,
+  ): Window48hAssessment => ({
     applicability,
     viability,
     countingBasis,
     consequenceIfExceeded,
     missingData,
+    inputEvidence,
+    ruleSources,
     evidence,
-  };
+  });
+
+  if (applicability === "INDETERMINADO") {
+    missingData.push(
+      "Não informado se a operação é de carga-pátio (retirada direta).",
+    );
+    return base(null, null, null);
+  }
+
+  if (applicability === "NAO_APLICAVEL") {
+    return base(null, null, null);
+  }
+
+  // APLICAVEL: a base de contagem precisa estar resolvida antes de concluir a
+  // viabilidade (AJUSTE 7.2 — Opção A: o motor não conclui sem a base).
+  const discriminated = context.facilityDiscriminatedInSchedule;
+  let countingBasis: string | null = null;
+  if (discriminated && isKnown(discriminated)) {
+    countingBasis = discriminated.value
+      ? WINDOW_48H_RULE.countingFromYardArrival
+      : WINDOW_48H_RULE.countingWhenNoFacilityDiscriminated;
+  }
+
+  if (countingBasis === null) {
+    missingData.push(
+      "Não informado se há recinto discriminado no agendamento (base de contagem).",
+    );
+    return base("INDETERMINADO", null, null);
+  }
+
+  const within = context.withinBusinessWindow;
+  if (!within || !isKnown(within)) {
+    missingData.push(
+      "Não informado se a retirada é viável dentro das 48h úteis.",
+    );
+    return base("INDETERMINADO", countingBasis, null);
+  }
+
+  if (within.value) {
+    return base("VIAVEL", countingBasis, null);
+  }
+
+  // Excedida: evidência de campo sobre a perda da janela (custo não capturado).
+  evidence.push(EVID_E28_JANELA, EVID_E31_JANELA);
+  return base("INVIAVEL", countingBasis, WINDOW_48H_RULE.consequenceIfExceeded);
+}
+
+/** Coleta a evidência dos inputs conhecidos (AJUSTE 7.4). */
+function collectInputEvidence(context: Window48hContext): Evidence[] {
+  const flags = [
+    context.cargoYardWithdrawal,
+    context.facilityDiscriminatedInSchedule,
+    context.withinBusinessWindow,
+  ];
+  const result: Evidence[] = [];
+  for (const flag of flags) {
+    if (flag && isKnown(flag)) {
+      result.push(flag.evidence);
+    }
+  }
+  return result;
 }

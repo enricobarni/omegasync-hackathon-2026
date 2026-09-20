@@ -87,7 +87,9 @@ export const TARIFF_SANTOS_BRASIL_DIRECT_DISCHARGE: DirectDischargeTariffRecord 
   capturedAt: "2026-08-31",
   confidence: "C",
   source: TARIFF_SOURCE_SANTOS_BRASIL_DESCARGA,
-  consolidated: true,
+  // NÃO consolidada (AJUSTE 4.1): a tabela pode ser de Imbituba/SC, não do
+  // Tecon Santos. Baseline histórico preservado, mas não usável como custo real.
+  consolidated: false,
   rates: {
     base: "CIF",
     rate: 0.0054,

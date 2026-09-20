@@ -17,7 +17,7 @@ export function fallbackSource(accessedAt: string): SourceReference {
     title: "Fallback offline (Logcomex indisponível)",
     publisher: "OmegaSync",
     accessedAt,
-    kind: "EXTERNAL_API",
+    kind: "INTERNAL_FALLBACK",
   };
 }
 
@@ -36,7 +36,9 @@ export function fallbackEnrichment(accessedAt: string): DocumentEnrichment {
     freight: unknownAmount(reason),
     insurance: unknownAmount(reason),
     items: [],
+    itemsProvided: false,
     documentRisks: [],
+    crossFieldValidation: null,
     summary: unknown(reason),
     overallConfidence: unknown(reason),
     source,

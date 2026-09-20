@@ -7,8 +7,8 @@ import {
   clearanceLabel,
   eligibilityLabel,
   formatCostTotal,
+  behavioralStateLabel,
   formatKnownSubtotal,
-  presenceLabel,
   windowLabel,
 } from "@/lib/ui/format";
 import styles from "./diagnosis.module.css";
@@ -108,6 +108,23 @@ export function ResultPanel({ result }: { result: SimulationResponseDTO }) {
                 </ul>
               </details>
             ) : null}
+            <details className={styles.disclosure} style={{ marginTop: 8 }}>
+              <summary>Motivos e evidências ({route.eligibility.reasons.length})</summary>
+              <ul className={styles.list}>
+                {route.eligibility.reasons.map((r, i) => (
+                  <li key={i}>
+                    <strong>{r.rule}</strong>: {r.detail}
+                    {r.evidence ? (
+                      <span className={styles.factorTendency}>
+                        {" "}
+                        — {r.evidence.originLabel}
+                        {r.evidence.confidenceLabel ? ` · ${r.evidence.confidenceLabel}` : ""}
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </details>
           </article>
         ))}
       </section>
@@ -131,9 +148,15 @@ export function ResultPanel({ result }: { result: SimulationResponseDTO }) {
           </div>
           <div className={styles.metric}>
             <div className={styles.metricValue}>
-              {result.comparison.lowestCostRouteId ?? "—"}
+              {result.comparison.costTotal.lowestRouteIds.length > 0
+                ? result.comparison.costTotal.lowestRouteIds.join(", ")
+                : "—"}
             </div>
-            <div className={styles.metricLabel}>Menor custo (rota)</div>
+            <div className={styles.metricLabel}>
+              {result.comparison.costTotal.fullyComparable
+                ? "Menor custo total"
+                : "Menor custo (comparação parcial)"}
+            </div>
           </div>
         </div>
       </section>
@@ -152,7 +175,7 @@ export function ResultPanel({ result }: { result: SimulationResponseDTO }) {
           <div key={factor.kind} className={styles.factor}>
             <span>{factor.kind}</span>
             <span>
-              {presenceLabel(factor.present)}
+              {behavioralStateLabel(factor.state)}
               {factor.tendency ? (
                 <span className={styles.factorTendency}> — {factor.tendency}</span>
               ) : null}

@@ -5,7 +5,7 @@
  * serviço de aplicação e devolve o status HTTP. Não duplica domínio.
  */
 
-import { BASELINE_CATALOG } from "@/lib/catalog";
+import { DEMO_CATALOG } from "@/lib/catalog";
 import { runSimulation } from "@/lib/application";
 import {
   toSimulationResponse,
@@ -30,7 +30,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const result = runSimulation({
     ...validation.value,
-    routes: BASELINE_CATALOG.routes,
+    routes: DEMO_CATALOG.routes,
   });
 
   return Response.json(toSimulationResponse(result), { status: 200 });

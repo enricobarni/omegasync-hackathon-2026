@@ -87,12 +87,20 @@ export function applicabilityLabel(status: string): string {
   }
 }
 
-/** Presença de fator comportamental: true/false/null. */
-export function presenceLabel(present: boolean | null): string {
-  if (present === null) {
-    return "Não informado";
+/** Estado de fator comportamental (AJUSTE 3.7): PRESENT/ABSENT/NOT_APPLICABLE/UNKNOWN. */
+export function behavioralStateLabel(state: string): string {
+  switch (state) {
+    case "PRESENT":
+      return "Presente";
+    case "ABSENT":
+      return "Ausente";
+    case "NOT_APPLICABLE":
+      return "Não aplicável";
+    case "UNKNOWN":
+      return "Não informado";
+    default:
+      return state;
   }
-  return present ? "Presente" : "Ausente";
 }
 
 export function anuenciaLabel(status: string, state: string | null): string {

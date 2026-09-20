@@ -16,9 +16,10 @@ import { availabilityUnknown, createEvidence, unknown } from "../domain";
 import { createCatalog } from "./catalog";
 import type { Catalog } from "./catalog";
 import {
-  BASELINE_FACILITIES,
   DP_WORLD_SANTOS,
+  OPERATIONAL_FACILITIES,
   RECINTO_ZS_GENERICO,
+  SIMULATION_FACILITIES,
 } from "./facilities";
 import { SOURCE_DTA_MANUAL, SOURCE_MENTORIA_ZONAS } from "./sources";
 
@@ -41,7 +42,7 @@ export const ROTA_MODELO_PRIMARIA_SECUNDARIA: Route = {
       source: SOURCE_DTA_MANUAL,
     }),
   },
-  acceptedCargoTypes: [],
+  acceptedCargoTypes: unknown("Tipos de carga aceitos não coletados para esta rota"),
   availability: availabilityUnknown(
     "Disponibilidade do recinto de Zona Secundária não informada (sem fonte)",
   ),
@@ -52,7 +53,22 @@ export const ROTA_MODELO_PRIMARIA_SECUNDARIA: Route = {
   source: SOURCE_MENTORIA_ZONAS,
 };
 
-/** Catálogo baseline validado (integridade referencial garantida). */
-export const BASELINE_CATALOG: Catalog = createCatalog(BASELINE_FACILITIES, [
-  ROTA_MODELO_PRIMARIA_SECUNDARIA,
-]);
+/**
+ * Catálogo OPERACIONAL: apenas recintos reais/verificados, sem rotas
+ * fabricadas (AJUSTE 2.3). Não contém a rota-modelo sintética.
+ */
+export const OPERATIONAL_CATALOG: Catalog = createCatalog(
+  OPERATIONAL_FACILITIES,
+  [],
+);
+
+/**
+ * Catálogo de DEMONSTRAÇÃO: acrescenta o recinto sintético de Zona Secundária
+ * e a rota-modelo entre zonas, claramente marcados como simulação. É o
+ * catálogo usado pela demo enquanto não há recintos/rotas reais de Zona
+ * Secundária com fonte.
+ */
+export const DEMO_CATALOG: Catalog = createCatalog(
+  [...OPERATIONAL_FACILITIES, ...SIMULATION_FACILITIES],
+  [ROTA_MODELO_PRIMARIA_SECUNDARIA],
+);
