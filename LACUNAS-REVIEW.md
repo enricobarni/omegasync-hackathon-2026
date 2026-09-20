@@ -41,9 +41,11 @@ Estados usados aqui: `RESOLVIDA POR CÓDIGO`, `MITIGADA`,
   `FacilityType`; virou `CustomsRegime`/habilitação rastreável. A afirmação
   antiga de "já resolvido na ETAPA 1" estava incorreta. Estado: **RESOLVIDA POR
   CÓDIGO**.
-- **R45/R46 — evidências:** painel global existe; a rastreabilidade estruturada
-  afirmação→evidência→fonte por saída ainda é parcial. Estado da L22:
-  **MITIGADA** (rastreabilidade por saída pendente — Fase 5).
+- **R45/R46 — evidências:** painel global + **rastreabilidade por saída**
+  implementada (cada regra de elegibilidade e a liberação carregam sua evidência
+  no contrato/UI; dedupe não colapsa evidências distintas; pesquisa de campo só
+  aparece quando o fator está PRESENTE; confiança da fonte chega à `EvidenceView`).
+  Estado da L22: **RESOLVIDA POR CÓDIGO**.
 - **R47 — resiliência Logcomex:** wrappers de timeout/fallback existem, mas a
   integração **não está ativa** (sem cliente HTTP real; timeout não cancela
   request real). Estado: infraestrutura preparada, **BLOQUEADA POR PROVEDOR**.
@@ -74,9 +76,8 @@ Estados usados aqui: `RESOLVIDA POR CÓDIGO`, `MITIGADA`,
 
 ### Pendências reais remanescentes (não são só de fonte)
 
-- rastreabilidade evidência↔afirmação por saída (FASE 5 / 16.x) — parcial;
 - E2E de browser desktop/mobile (17.1) — pendente (exigiria dependência de
-  runner de browser);
+  runner de browser; há testes de fluxo essenciais no nível de API/serviço);
 - backlog Logcomex grupos B/C e itens de mercado (14.x) — dependem de contrato
   real do provedor;
 - itens MÉDIA/BAIXA remanescentes de custos/tarifas (4.4, 4.9, 5.2, 5.4, 5.6–

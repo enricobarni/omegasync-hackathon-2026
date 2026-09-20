@@ -129,7 +129,14 @@ function dedupeEvidences(evidences: Evidence[]): Evidence[] {
   const seen = new Set<string>();
   const result: Evidence[] = [];
   for (const evidence of evidences) {
-    const key = `${evidence.origin}|${evidence.reference ?? ""}`;
+    // Chave inclui fonte e confiança para NÃO colapsar evidências distintas
+    // que compartilham origem/referência (AJUSTE 16.3).
+    const key = [
+      evidence.origin,
+      evidence.reference ?? "",
+      evidence.confidence ?? "",
+      evidence.source?.id ?? "",
+    ].join("|");
     if (seen.has(key)) {
       continue;
     }
@@ -215,11 +222,18 @@ export function runSimulation(input: SimulationInput): SimulationResult {
       .map((amount) => amount.evidence),
   );
 
+  // Evidência de pesquisa comportamental só entra quando o fator está PRESENTE
+  // (sustenta a tendência). Fator ausente/N-A/desconhecido não deve parecer
+  // prova da condição individual (AJUSTE 16.4).
+  const behavioralEvidences = behavioralFactors
+    .filter((factor) => factor.state === "PRESENT")
+    .map((factor) => factor.evidence);
+
   const evidences = dedupeEvidences([
     ...clearance.evidence,
     ...costEvidences,
     ...window48h.evidence,
-    ...behavioralFactors.map((factor) => factor.evidence),
+    ...behavioralEvidences,
   ]);
 
   return {

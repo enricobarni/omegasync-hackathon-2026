@@ -13,6 +13,9 @@ export interface EvidenceSourceView {
   title: string;
   publisher: string;
   kind: string;
+  confidence?: string;
+  /** Fonte planejada ainda não consultada (não é fonte verificada). */
+  consulted?: boolean;
   accessedAt?: string;
   effectiveFrom?: string;
   effectiveTo?: string;
@@ -65,9 +68,11 @@ export function toEvidenceView(evidence: Evidence): EvidenceView {
   if (evidence.reference !== undefined) {
     view.reference = evidence.reference;
   }
-  if (evidence.confidence !== undefined) {
-    view.confidence = evidence.confidence;
-    view.confidenceLabel = confidenceLabel(evidence.confidence);
+  // Confiança pode vir da evidência OU da fonte (AJUSTE 16.5).
+  const confidence = evidence.confidence ?? evidence.source?.confidence;
+  if (confidence !== undefined) {
+    view.confidence = confidence;
+    view.confidenceLabel = confidenceLabel(confidence);
   }
   if (evidence.source) {
     const s = evidence.source;
@@ -75,6 +80,8 @@ export function toEvidenceView(evidence: Evidence): EvidenceView {
       title: s.title,
       publisher: s.publisher,
       kind: s.kind,
+      ...(s.confidence ? { confidence: s.confidence } : {}),
+      ...(s.consulted !== undefined ? { consulted: s.consulted } : {}),
       ...(s.accessedAt ? { accessedAt: s.accessedAt } : {}),
       ...(s.effectiveFrom ? { effectiveFrom: s.effectiveFrom } : {}),
       ...(s.effectiveTo ? { effectiveTo: s.effectiveTo } : {}),

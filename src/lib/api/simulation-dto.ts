@@ -18,7 +18,7 @@ import {
 } from "../domain";
 import type { ComparableDimension, Window48hContext } from "../engine";
 import type { SimulationResult } from "../application";
-import { toEvidenceViews } from "../evidence";
+import { toEvidenceView, toEvidenceViews } from "../evidence";
 import type { EvidenceView } from "../evidence";
 
 // --- Contrato de requisição ----------------------------------------------
@@ -208,14 +208,33 @@ export interface ComparisonDimensionDTO {
   fullyComparable: boolean;
 }
 
+/** Motivo auditável de uma regra de elegibilidade (afirmação → evidência). */
+export interface EligibilityReasonDTO {
+  rule: string;
+  outcome: string;
+  detail: string;
+  evidence: EvidenceView | null;
+}
+
 export interface SimulationResponseDTO {
-  clearance: { status: string; reasons: string[]; missingData: string[] };
+  clearance: {
+    status: string;
+    reasons: string[];
+    missingData: string[];
+    evidences: EvidenceView[];
+  };
   anuencia: { status: string; state: string | null };
   routes: Array<{
     routeId: string;
     label: string;
     movement: string;
-    eligibility: { status: string; summary: string; missingData: string[] };
+    eligibility: {
+      status: string;
+      summary: string;
+      missingData: string[];
+      /** Cada regra com sua evidência (rastreabilidade por saída, AJUSTE 16.1). */
+      reasons: EligibilityReasonDTO[];
+    };
     cost: {
       knownSubtotal: number;
       total: number | null;
@@ -273,6 +292,7 @@ export function toSimulationResponse(
       status: result.clearance.status,
       reasons: result.clearance.reasons,
       missingData: result.clearance.missingData,
+      evidences: toEvidenceViews(result.clearance.evidence),
     },
     anuencia: {
       status: result.anuencia.status,
@@ -289,6 +309,12 @@ export function toSimulationResponse(
         status: sim.eligibility.status,
         summary: sim.eligibility.summary,
         missingData: sim.eligibility.missingData,
+        reasons: sim.eligibility.reasons.map((r) => ({
+          rule: r.rule,
+          outcome: r.outcome,
+          detail: r.detail,
+          evidence: r.evidence ? toEvidenceView(r.evidence) : null,
+        })),
       },
       cost: {
         knownSubtotal: sim.cost.summary.knownSubtotal,

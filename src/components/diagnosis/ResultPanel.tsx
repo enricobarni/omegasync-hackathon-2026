@@ -108,6 +108,23 @@ export function ResultPanel({ result }: { result: SimulationResponseDTO }) {
                 </ul>
               </details>
             ) : null}
+            <details className={styles.disclosure} style={{ marginTop: 8 }}>
+              <summary>Motivos e evidências ({route.eligibility.reasons.length})</summary>
+              <ul className={styles.list}>
+                {route.eligibility.reasons.map((r, i) => (
+                  <li key={i}>
+                    <strong>{r.rule}</strong>: {r.detail}
+                    {r.evidence ? (
+                      <span className={styles.factorTendency}>
+                        {" "}
+                        — {r.evidence.originLabel}
+                        {r.evidence.confidenceLabel ? ` · ${r.evidence.confidenceLabel}` : ""}
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </details>
           </article>
         ))}
       </section>

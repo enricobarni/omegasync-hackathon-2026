@@ -90,9 +90,11 @@ describe("toSimulationResponse", () => {
     expect(dto.routes[0].cost.total).toBeNull();
     expect(Array.isArray(dto.comparison.viable)).toBe(true);
     expect(dto.window48h.applicability).toBe("INDETERMINADO");
-    // evidências expostas no contrato (ETAPA 16 / L22)
+    // evidências globais expostas (podem estar vazias quando nada as sustenta)
     expect(Array.isArray(dto.evidences)).toBe(true);
-    expect(dto.evidences.length).toBeGreaterThan(0);
-    expect(dto.evidences[0].originLabel).toBeTruthy();
+    // rastreabilidade por saída: cada regra da rota carrega motivo (AJUSTE 16.1)
+    expect(dto.routes[0].eligibility.reasons.length).toBeGreaterThan(0);
+    const dtaReason = dto.routes[0].eligibility.reasons.find((r) => r.rule === "DTA");
+    expect(dtaReason?.evidence?.originLabel).toBeTruthy();
   });
 });
