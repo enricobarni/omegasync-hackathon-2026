@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { MessageSquare, SendHorizontal, X } from "lucide-react";
+import { MessageSquare, Plug, SendHorizontal, X } from "lucide-react";
 
 import type { ChatResponse } from "@/lib/assistant";
 import type { SimulationResponseDTO } from "@/lib/api";
@@ -13,6 +13,21 @@ interface ChatPanelProps {
   simulation: SimulationResponseDTO | null;
 }
 
+/** Estado de conexão com a Logcomex (nunca inclui token — só o que a API expõe). */
+interface ConnectionState {
+  authenticated: boolean;
+  agentName: string | null;
+}
+
+/** Lê o retorno do fluxo OAuth (?logcomex=connected|error) da URL atual. */
+function readLogcomexFlag(): "connected" | "error" | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const flag = new URLSearchParams(window.location.search).get("logcomex");
+  return flag === "connected" || flag === "error" ? flag : null;
+}
+
 /**
  * Painel do assistente (PLANEJAMENTO-MCP.md §16, DESIGN.md §10/§28).
  *
@@ -21,7 +36,9 @@ interface ChatPanelProps {
  * o MCP diretamente — fala apenas com POST /api/assistant/chat.
  */
 export function ChatPanel({ simulation }: ChatPanelProps) {
-  const [open, setOpen] = useState(false);
+  // Abre o painel automaticamente quando voltamos do fluxo OAuth (initializer
+  // lazy: evita setState síncrono em efeito).
+  const [open, setOpen] = useState(() => readLogcomexFlag() !== null);
   const [input, setInput] = useState("");
   const [items, setItems] = useState<ChatItem[]>([]);
   const [pending, setPending] = useState(false);
@@ -32,6 +49,13 @@ export function ChatPanel({ simulation }: ChatPanelProps) {
   const [conversationId, setConversationId] = useState<string | undefined>(
     undefined,
   );
+  // Conexão Logcomex (agente da empresa via OAuth). O componente só conhece
+  // `{ authenticated, agentName }` — o token vive server-side.
+  const [connection, setConnection] = useState<ConnectionState | null>(null);
+  const [connNotice, setConnNotice] = useState<"connected" | "error" | null>(
+    () => readLogcomexFlag(),
+  );
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const openButtonRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -61,6 +85,66 @@ export function ChatPanel({ simulation }: ChatPanelProps) {
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
   }, [items, pending]);
+
+  // Após montar, limpa o parâmetro ?logcomex da URL (efeito colateral, sem
+  // setState) e consulta o status de conexão atual (setState só após o await).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("logcomex")) {
+      params.delete("logcomex");
+      const query = params.toString();
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${query ? `?${query}` : ""}`,
+      );
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch("/api/logcomex/auth/status", {
+          cache: "no-store",
+        });
+        if (!response.ok || cancelled) {
+          return;
+        }
+        const data = (await response.json()) as ConnectionState;
+        if (!cancelled) {
+          setConnection({
+            authenticated: Boolean(data.authenticated),
+            agentName: data.agentName ?? null,
+          });
+        }
+      } catch {
+        // Status indisponível: mantém o estado (fallback público continua).
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function connect() {
+    // Navegação de topo intencional: /start responde 302 para a autorização
+    // EXTERNA da Logcomex (fora do Next). O router do cliente não segue esse
+    // fluxo OAuth, então usamos location.assign.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign("/api/logcomex/auth/start");
+  }
+
+  async function logout() {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/logcomex/auth/logout", { method: "POST" });
+      setConnection({ authenticated: false, agentName: null });
+      setConnNotice(null);
+    } catch {
+      // Falha ao encerrar: mantém o estado; o usuário pode tentar de novo.
+    } finally {
+      setLoggingOut(false);
+    }
+  }
 
   async function send(question: string) {
     setPending(true);
@@ -173,6 +257,52 @@ export function ChatPanel({ simulation }: ChatPanelProps) {
             <X size={16} strokeWidth={1.6} aria-hidden="true" />
           </button>
         </header>
+
+        <div className={styles.connbar}>
+          <div className={styles.connInfo}>
+            <span className={styles.connLabel}>Logcomex</span>
+            <span className={styles.connAgent}>
+              {connection?.authenticated
+                ? (connection.agentName ?? "Agente da empresa")
+                : "Agente público"}
+            </span>
+          </div>
+          {connection?.authenticated ? (
+            <div className={styles.connActions}>
+              <span className={styles.connBadge}>Conectado</span>
+              <button
+                type="button"
+                className={styles.connLogout}
+                onClick={logout}
+                disabled={loggingOut}
+              >
+                Sair
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={styles.connConnect}
+              onClick={connect}
+            >
+              <Plug size={14} strokeWidth={1.6} aria-hidden="true" />
+              Conectar Logcomex
+            </button>
+          )}
+        </div>
+
+        {connNotice ? (
+          <div
+            className={
+              connNotice === "connected" ? styles.connOk : styles.connErr
+            }
+            role="status"
+          >
+            {connNotice === "connected"
+              ? "Conta Logcomex conectada. O assistente pode usar o agente da empresa."
+              : "Não foi possível conectar à conta Logcomex. Continuando com orientação pública."}
+          </div>
+        ) : null}
 
         <div className={styles.messages} ref={listRef} aria-live="polite">
           {items.length === 0 && !pending ? (
