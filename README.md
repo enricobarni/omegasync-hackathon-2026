@@ -1,165 +1,341 @@
 # OmegaSync
 
-Motor de elegibilidade e comparação de rotas aduaneiro-operacionais, construído
-durante o Porto Hack Santos 2026.
+**Motor de apoio à decisão para operações aduaneiro-portuárias, desenvolvido no Porto Hack Santos 2026.**
 
-> **Status: protótipo congelado (2026-09-20).** As Etapas Finais 1–5 estão
-> concluídas. Não há novas features em desenvolvimento — apenas correções
-> críticas (bug que quebre a demo, erro de build/autenticação/MCP ou erro factual
-> crítico). Ver `PLANEJAMENTO-FINALIZACAO.md §23` e `LACUNAS-REVIEW.md §0.6`.
+O OmegaSync recebe os dados de uma operação de importação, avalia alternativas operacionais e apresenta **elegibilidade, restrições, custos conhecidos, incertezas, evidências e dados faltantes**. A proposta é apoiar a decisão sem transformar ausência de informação em falsa certeza.
 
-Dada uma carga, o OmegaSync responde:
+> **Status:** protótipo funcional e congelado para demonstração.
+
+## Links públicos
+
+- **Aplicação:** https://omegasync-hackathon-2026.vercel.app/
+- **Repositório:** https://github.com/enricobarni/omegasync-hackathon-2026
+
+## O que está funcional
+
+- Diagnóstico de uma operação a partir de NCM, CIF, tipo de carga, OEA, canal aduaneiro e condições operacionais.
+- Motor determinístico de elegibilidade de rotas.
+- Comparação entre alternativas de retirada direta e transferência para Zona Secundária via DTA.
+- Avaliação de liberação aduaneira, anuência, DTA, disponibilidade, distância, prazo, janela de 48h e fatores operacionais.
+- Comparação de custos preservando estados de informação desconhecidos.
+- Painel de evidências e proveniência.
+- Assistente integrado à **Logcomex via MCP**.
+- Agente público da Logcomex sem autenticação.
+- Agente da equipe `Agente PortoHackSantos26-GP07` via OAuth 2.0 + PKCE.
+- Fallback controlado quando a integração Logcomex estiver indisponível.
+- Testes automatizados, typecheck, lint e build em CI.
+
+## Como funciona
 
 ```text
-Quais rotas podem ser executadas?  →  Quanto custa cada uma?
-Quais restrições existem?  →  Qual o prazo/distância?  →  Com quais evidências?
+Usuário
+  ↓
+Diagnóstico
+  ↓
+API OmegaSync
+  ↓
+Motor determinístico
+  ├── liberação / anuência
+  ├── elegibilidade
+  ├── custos
+  ├── comparação
+  └── janela de 48h
+  ↓
+Resultado + evidências + dados faltantes
+
+Assistente
+  ↓
+API interna OmegaSync
+  ↓
+MCP Logcomex
 ```
 
-## Como executar
+A Logcomex fornece **contexto e dados consultivos**. A decisão continua sendo responsabilidade do motor do OmegaSync.
 
-Requer Node 24+.
+## Stack
+
+- **Next.js 16.3.5**
+- **React 19**
+- **TypeScript 5**
+- **Tailwind CSS 4**
+- **Vitest**
+- **MCP SDK oficial**
+- **Logcomex MCP**
+- **OAuth 2.0 Authorization Code + PKCE**
+- **Vercel**
+
+## Como executar localmente
+
+### 1. Pré-requisitos
+
+- Node.js 24+
+- npm
+- Git
+
+### 2. Clone o projeto
+
+```bash
+git clone https://github.com/enricobarni/omegasync-hackathon-2026.git
+cd omegasync-hackathon-2026
+```
+
+### 3. Instale as dependências
+
+Como o projeto possui `package-lock.json`, prefira:
+
+```bash
+npm ci
+```
+
+Também é possível usar:
 
 ```bash
 npm install
-npm run dev      # ambiente de desenvolvimento em http://localhost:3000
 ```
 
-A tela principal (`/`) é o **Diagnóstico**: preencha os dados da carga e execute
-a simulação. A API correspondente é `POST /api/simulations`. O botão
-**Assistente** abre um chat consultivo (`POST /api/assistant/chat`) que recebe a
-simulação atual como contexto e consulta a Logcomex via MCP.
+### 4. Configure as variáveis de ambiente
 
-O roteiro oficial da demonstração (cenário, perguntas e testes de falha) está em
-[`DEMO.md`](./DEMO.md).
-
-### Validação
+Copie o arquivo de exemplo:
 
 ```bash
-npm run test        # testes (vitest)
-npx tsc --noEmit    # checagem de tipos
-npm run lint        # eslint
-npm run build       # build de produção
+cp .env.example .env.local
 ```
 
-## Arquitetura
-
-```text
-Apresentação / UI            src/app, src/components
-        ↓
-Aplicação / orquestração     src/lib/application (serviço de simulação)
-        ↓                    src/lib/api (DTOs, validação de borda)
-Domínio (determinístico)     src/lib/domain (contratos, estados de informação)
-   ├── elegibilidade         src/lib/engine (eligibility, custos, comparação, 48h)
-   └── comparação/custos
-        ↓
-Dados / integrações          src/lib/catalog, src/lib/tariffs, src/lib/customs,
-                             src/lib/logcomex, src/lib/portfolio
-```
-
-Princípios (ver `AGENTS.md`):
-
-- o **domínio é determinístico** e não acessa rede, React, HTTP ou Logcomex;
-- integrações **fornecem dados**, não decidem rota;
-- `unknown != zero`, `unknown != false`, `não aplicável != false`;
-- todo dado externo relevante mantém **proveniência**.
-
-## Dados reais x premissas na demo
-
-O detalhe completo está em [`LACUNAS-REVIEW.md`](./LACUNAS-REVIEW.md) e em
-[`FONTES.md`](./FONTES.md). Resumo do que a demo usa:
-
-| Dado | Estado |
-| --- | --- |
-| Armazenagem DP World Santos / Ecoporto | Tabela pública datada (confiança A) |
-| Descarga Direta "Santos Brasil" | Baseline histórico, **não consolidado** e com ressalva de Imbituba (confiança C) — não gera custo real |
-| BTP | **Não consolidado** — não usado como constante |
-| Registro NCM → órgão anuente | **Vazio** — sem mapeamento inventado; resolução considera atributos e múltiplas entradas |
-| Disponibilidade, distância, prazo, custo/km, capital, DTA | Desconhecidos / premissas explícitas |
-| Entreposto aduaneiro | **Regime** (não tipo de recinto), pendente de validação com evidência por condição (Manual RFB) |
-| Logcomex — chat consultivo (MCP) | **Ativo** via MCP `https://mcp.logcomex.ai/`, agente público `chat_free` (sem token); agente da empresa via **OAuth interativo** (Conectar Logcomex); texto livre = contexto, não altera o motor |
-| Logcomex — documental, tracking, mercado | Adapters/ports + fallback; **integração não ativa** (depende de contrato/schema real via MCP) |
-
-Nada acima é convertido em número inventado: valores ausentes permanecem
-desconhecidos ou premissas rotuladas. Estados de informação distinguem
-`conhecido`, `desconhecido` e `não aplicável`.
-
-## Integração Logcomex
-
-### Chat consultivo via MCP (ativo)
-
-O assistente do OmegaSync é integrado à Logcomex pelo **MCP** (Model Context
-Protocol) fornecido pela plataforma:
-
-```text
-Browser → POST /api/assistant/chat → ChatService → adapter MCP → mcp.logcomex.ai
-```
-
-O browser **nunca** fala com o MCP diretamente e o domínio **nunca** depende do
-provedor. Validado em 2026-09-20 contra `https://mcp.logcomex.ai/`:
-
-- handshake MCP (`initialize`) e discovery (`tools/list`) reais;
-- tools observadas: `chat_free`, `chat_with_agent`, `list_agents`,
-  `get_task_status`, `cancel_task`, `list_missions`, `search_missions`,
-  `get_mission`;
-- **`chat_free` (agente público) não requer autenticação** — é o caminho padrão
-  do protótipo;
-- **agentes da empresa** (`list_agents`/`chat_with_agent`) exigem **OAuth 2.0**
-  (Authorization Code + PKCE S256, escopo `mcp:chat:agents`). O botão **Conectar
-  Logcomex** inicia o fluxo real (discovery RFC 9728 + Dynamic Client
-  Registration via SDK oficial); o token fica em **sessão server-side** (cookie
-  httpOnly), nunca no browser. Alternativamente, um token Bearer estático pode
-  ser fornecido via `LOGCOMEX_MCP_ACCESS_TOKEN`. Sem sessão nem token, o chat usa
-  o agente público. O agente esperado (`Agente PortoHackSantos26-GP07`) é
-  selecionado **explicitamente por nome** — nunca "o primeiro"; sem
-  correspondência, cai no agente público;
-- execução assíncrona (`task_id` → `get_task_status`) é suportada com polling
-  controlado (intervalo/timeout configuráveis; sem loop infinito).
-
-O texto do agente é sempre apresentado como **contexto/orientação** (rótulo de
-origem + ressalva "não altera automaticamente a decisão do motor"). Perguntas
-sobre órgão anuente/LPCO recebem ressalva explícita: **o motor permanece
-INDETERMINADO** enquanto não houver fonte estruturada e rastreável. Falha/timeout
-do MCP viram estado `degraded` com mensagem amigável — nunca falsa certeza.
-
-Configuração (server-side, ver `.env.example`):
+Configuração mínima:
 
 ```env
 LOGCOMEX_MCP_URL=https://mcp.logcomex.ai/
 LOGCOMEX_MCP_TIMEOUT_MS=90000
 LOGCOMEX_MCP_POLL_INTERVAL_MS=5000
 LOGCOMEX_MCP_POLL_TIMEOUT_MS=120000
-# LOGCOMEX_MCP_ACCESS_TOKEN=   # opcional: token OAuth estático p/ agente da empresa
-# LOGCOMEX_MCP_AGENT_ID=       # opcional: id do agente da empresa preferido
-# LOGCOMEX_MCP_AGENT_NAME=Agente PortoHackSantos26-GP07  # nome-alvo explícito
-# LOGCOMEX_OAUTH_SCOPE=mcp:chat:free mcp:chat:agents offline_access
 ```
 
-O fluxo OAuth interativo do agente da empresa é exposto por
-`GET /api/logcomex/auth/start`, `.../callback`, `.../status` e
-`POST /api/logcomex/auth/logout`. Discovery, DCR e PKCE foram validados contra o
-servidor real (2026-09-20); o login/consentimento e a troca final `code → token`
-dependem de um usuário humano no provedor (ver `FONTES.md §34`).
+O agente público da Logcomex funciona sem token.
 
-### Documental, tracking e mercado (não ativos)
+Para o agente da empresa, o próprio sistema utiliza o fluxo OAuth interativo pelo botão **Conectar Logcomex**.
 
-A arquitetura está **preparada para integração** (DTOs do provedor, ports e
-adapters puros, fallback offline com timeout em `src/lib/logcomex/resilient.ts`),
-mas análise documental, tracking e inteligência de mercado **ainda não são
-alimentados pelo MCP**: falta confirmar o schema real de entrada/saída (structured
-vs. texto). Enquanto o retorno for texto livre, serve apenas como contexto de
-chat — nunca deriva fato determinístico. O CIF não é derivado em BRL enquanto a
-moeda das parcelas não for confirmada. A Agent API HTTP permanece **adiada**
-(provedor relatou instabilidade).
+> Nunca versione tokens ou segredos reais. O `.env.example` contém apenas configuração pública e placeholders.
 
-## Integração contínua
+### 5. Inicie o projeto
 
-`.github/workflows/ci.yml` executa `test`, `tsc --noEmit`, `lint` e `build` em
-cada push/PR.
+```bash
+npm run dev
+```
 
-## Documentos do projeto
+Abra:
 
-- `PLANEJAMENTO.md` — etapas, escopo e ordem.
-- `FONTES.md` — baseline factual, fórmulas, tarifas, evidências.
-- `DESIGN.md` — identidade visual e frontend.
-- `LACUNAS-REVIEW.md` — lacunas de dados e decisões de review, etapa a etapa.
-- `DEMO.md` — roteiro oficial de demonstração (cenário, perguntas e testes de falha).
+```text
+http://localhost:3000
+```
+
+Para testar como build de produção:
+
+```bash
+npm run build
+npm run start
+```
+
+## Teste rápido do diagnóstico
+
+Um cenário de demonstração disponível no projeto:
+
+| Campo                   | Valor                      |
+| ----------------------- | -------------------------- |
+| NCM                     | `85171300`                 |
+| CIF                     | `100000`                   |
+| Tipo de carga           | `FCL (contêiner completo)` |
+| Status OEA              | `Não OEA`                  |
+| Canal aduaneiro         | `Verde`                    |
+| Necessita entrepostagem | `Não`                      |
+| Operação carga-pátio    | `Sim`                      |
+| Recinto discriminado    | `Não informado`            |
+| Caixa para antecipação  | `Não`                      |
+| Estrutura sincronizada  | `Não`                      |
+
+Resultado esperado: o motor deve explicitar as incertezas da operação em vez de fabricar valores ou conclusões.
+
+O roteiro completo está em [`DEMO.md`](./DEMO.md).
+
+## Assistente Logcomex
+
+O painel **Assistente** consulta a Logcomex por MCP.
+
+### Sem login
+
+Usa:
+
+```text
+chat_free
+```
+
+O agente público funciona sem credenciais.
+
+### Agente da equipe
+
+Clique em:
+
+```text
+Conectar Logcomex
+```
+
+O fluxo utiliza:
+
+```text
+OAuth 2.0
+→ Authorization Code
+→ PKCE S256
+→ sessão server-side
+→ list_agents
+→ Agente PortoHackSantos26-GP07
+→ chat_with_agent
+```
+
+Tokens não são enviados para o frontend.
+
+O agente da equipe é selecionado explicitamente por nome/ID; o sistema não escolhe outro agente silenciosamente.
+
+## Perguntas para testar o assistente
+
+Com uma simulação já executada:
+
+```text
+Por que esta rota ficou indeterminada?
+```
+
+```text
+Quais dados estão faltando?
+```
+
+```text
+O que significa DTA?
+```
+
+Com o agente da empresa conectado:
+
+```text
+Liste os 5 maiores importadores brasileiros da NCM 8517.13.00 nos últimos 12 meses, ordenados pelo valor FOB total.
+```
+
+## Arquitetura
+
+```text
+src/
+├── app/
+│   └── api/
+│       ├── simulations/
+│       ├── assistant/
+│       └── logcomex/auth/
+├── components/
+│   ├── diagnosis/
+│   └── assistant/
+└── lib/
+    ├── domain/
+    ├── engine/
+    ├── application/
+    ├── api/
+    ├── catalog/
+    ├── tariffs/
+    ├── customs/
+    ├── evidence/
+    └── logcomex/
+```
+
+Princípio arquitetural:
+
+```text
+UI → Application → Domain
+                    ↑
+             integrações externas
+```
+
+Nunca:
+
+```text
+Browser → MCP diretamente
+Domain → Logcomex
+```
+
+## Regras de confiabilidade
+
+O OmegaSync foi construído para preservar explicitamente estados de informação:
+
+```text
+UNKNOWN != false
+UNKNOWN != zero
+UNKNOWN != NOT_APPLICABLE
+```
+
+Também:
+
+```text
+NCM sugerida != NCM confirmada
+texto livre != fato determinístico
+premissa de demonstração != fato real
+```
+
+Se não houver fonte suficiente, o sistema apresenta o dado como **desconhecido ou indeterminado**.
+
+## Dados reais e premissas
+
+O protótipo combina:
+
+- tabelas tarifárias públicas documentadas;
+- regras e referências aduaneiras pesquisadas;
+- evidências de pesquisa de campo;
+- premissas explícitas para demonstração;
+- dados consultivos da Logcomex.
+
+Nenhuma ausência de dado é silenciosamente convertida em valor real.
+
+Para rastreabilidade completa:
+
+- [`FONTES.md`](./FONTES.md)
+- [`LACUNAS-REVIEW.md`](./LACUNAS-REVIEW.md)
+
+## Validação técnica
+
+Execute:
+
+```bash
+npm run test
+npx tsc --noEmit
+npm run lint
+npm run build
+```
+
+O repositório também possui CI executando essas verificações em pushes e Pull Requests.
+
+## Estrutura documental
+
+- [`DEMO.md`](./DEMO.md) — roteiro oficial da demonstração.
+- [`FONTES.md`](./FONTES.md) — fontes, dados e evidências.
+- [`LACUNAS-REVIEW.md`](./LACUNAS-REVIEW.md) — limitações, decisões e lacunas conhecidas.
+- [`PLANEJAMENTO.md`](./PLANEJAMENTO.md) — planejamento técnico.
+- [`PLANEJAMENTO-MCP.md`](./PLANEJAMENTO-MCP.md) — integração Logcomex/MCP.
+- [`DESIGN.md`](./DESIGN.md) — diretrizes de interface.
+
+## Limitações conhecidas
+
+Este é um **protótipo de hackathon**, não um sistema de produção.
+
+Alguns dados operacionais permanecem desconhecidos quando não existe fonte estruturada confiável, incluindo, dependendo do cenário:
+
+- disponibilidade real de recintos;
+- distância e prazo de determinadas rotas;
+- custo real de DTA;
+- tratamento administrativo completo por NCM/atributos;
+- alguns componentes de custo operacional.
+
+Isso é intencional: o motor prefere retornar **INDETERMINADO** a apresentar uma conclusão sem sustentação.
+
+## Porto Hack Santos 2026
+
+Projeto desenvolvido para o **Porto Hack Santos 2026**, com foco em apoio à decisão e sincronização de operações de importação no ecossistema portuário.
+
+**OmegaSync**
+
+```text
+Decidir com os dados disponíveis.
+Mostrar o que falta.
+Explicar o porquê.
+```
