@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-20 — ETAPA FINAL 2 (Diagnóstico como núcleo da demo).
+Última atualização: 2026-09-20 — ETAPA FINAL 3 (OAuth Logcomex e agente da empresa).
 
 ---
 
@@ -188,6 +188,60 @@ indeterminação usando o resultado como contexto (`source` público, `OK`).
 
 Sem novas lacunas: as ausências (distância/prazo/custo/disponibilidade/anuência)
 seguem as lacunas L03–L19 já registradas, agora apenas mais visíveis na UI.
+
+---
+
+## 0.4. ETAPA FINAL 3 — OAuth Logcomex e agente da empresa (2026-09-20)
+
+Referência: `PLANEJAMENTO-FINALIZACAO.md §6–§15`. Branch
+`feat/logcomex-company-agent-oauth`.
+
+Implementado (sem hardcodar endpoints, client_id, secret ou scope — tudo via
+discovery real do SDK oficial):
+
+- **Fluxo OAuth 2.0 Authorization Code + PKCE (S256)** server-side, usando o
+  orquestrador `auth()` do `@modelcontextprotocol/sdk`: discovery RFC 9728,
+  Dynamic Client Registration (cliente público, sem secret), `state` (CSRF) e
+  troca `code` → token. Tokens vivem em **sessão server-side** (Map de processo);
+  o browser recebe só um cookie httpOnly com id opaco — nunca token, nunca
+  `localStorage`/`sessionStorage`/`NEXT_PUBLIC_*`.
+- **Rotas internas:** `GET /api/logcomex/auth/start`, `GET .../callback`,
+  `GET .../status` (devolve apenas `{ authenticated, agentName }`),
+  `POST .../logout`.
+- **Seleção explícita do agente (§13):** `resolveCompanyAgent` escolhe o agente
+  por id configurado ou por NOME esperado (`Agente PortoHackSantos26-GP07`),
+  nunca "o primeiro"; sem correspondência → **fallback público** (`chat_free`),
+  sem usar outro agente silenciosamente.
+- **Renovação (§14):** com `refresh_token`, o transporte do SDK renova o token
+  automaticamente (authProvider) e regrava na sessão; sem ele, a sessão expira e
+  o usuário reconecta.
+- **UI (`ChatPanel`):** barra "Logcomex" com estado (agente público × agente da
+  empresa), botão **Conectar Logcomex**, badge **Conectado** + **Sair**, e aviso
+  amigável quando o OAuth falha ("Continuando com orientação pública"). O chat
+  nunca deixa de funcionar por falha do agente da empresa.
+
+Validação real (2026-09-20, servidor `https://mcp.logcomex.ai/`,
+`logcomex-ai-mcp v1.1.0`), **não-interativa**, exercitando o caminho exato do
+SDK: handshake + `tools/list`; discovery RFC 9728 (endpoints `/authorize`,
+`/token`, `/register`, escopos `mcp:chat:free mcp:chat:agents offline_access`,
+PKCE S256 — batendo com `FONTES.md §34`); `auth()` retornando `REDIRECT` com DCR
+emitindo `client_id`, PKCE `code_verifier` salvo, `state` casando na URL de
+autorização.
+
+**Limitação honesta (não é falha do OmegaSync):** o login/consentimento
+interativo na Logcomex e a troca final `code` → `access_token`/`refresh_token`
+exigem um usuário humano autenticando no provedor; **não foi possível exercitar
+headless** nesta rodada. O código está pronto para completar o fluxo assim que um
+login real ocorrer (a demo deve validar esse último passo com um operador).
+
+Estados atualizados:
+
+- **L20 — cliente HTTP/endpoint + credenciais Logcomex:** o agente da empresa
+  deixa de estar **BLOQUEADO POR AUTENTICAÇÃO**: o fluxo OAuth real está
+  implementado e validado até a URL de autorização. Permanece **pendente apenas o
+  login interativo** (passo humano). Fora isso, MITIGADA via MCP.
+- **L11/L18 — anuência (NCM → órgão/LPCO):** seguem **ABERTAS.** Mesmo com o
+  agente da empresa, o `reply` é texto livre e não promove fato ao motor.
 
 ---
 
@@ -464,3 +518,10 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   conceitual (retirada direta, PREMISSA_SIMULACAO); DTA e disponibilidade
   expostos no DTO e na UI; comparação e janela de 48h com explicação honesta.
   Ver seção "0.3".
+- **2026-09-20 — ETAPA FINAL 3 (OAuth Logcomex e agente da empresa):** fluxo
+  OAuth 2.0 Authorization Code + PKCE server-side (discovery RFC 9728 + DCR via
+  SDK), rotas `/api/logcomex/auth/*`, sessão server-side (token nunca no
+  browser), seleção explícita do agente `Agente PortoHackSantos26-GP07` com
+  fallback público, e UI de conexão no ChatPanel. Discovery/DCR/PKCE validados
+  contra o servidor real; login interativo pendente (passo humano). Ver seção
+  "0.4" e `FONTES.md §34`.
