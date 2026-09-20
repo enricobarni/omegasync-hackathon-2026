@@ -228,6 +228,10 @@ export interface SimulationResponseDTO {
     routeId: string;
     label: string;
     movement: string;
+    /** Necessidade de DTA da rota (REQUIRED/NOT_REQUIRED/UNKNOWN). */
+    requiresDta: { status: string; reason?: string };
+    /** Disponibilidade da rota (AVAILABLE/UNAVAILABLE/UNKNOWN). */
+    availability: { status: string; reason?: string };
     eligibility: {
       status: string;
       summary: string;
@@ -305,6 +309,19 @@ export function toSimulationResponse(
       routeId: sim.route.id,
       label: sim.route.label,
       movement: sim.route.movement ?? "OUTRO",
+      requiresDta: {
+        status: sim.route.requiresDta.status,
+        ...(sim.route.requiresDta.status === "UNKNOWN" &&
+        sim.route.requiresDta.reason
+          ? { reason: sim.route.requiresDta.reason }
+          : {}),
+      },
+      availability: {
+        status: sim.route.availability.status,
+        ...("reason" in sim.route.availability && sim.route.availability.reason
+          ? { reason: sim.route.availability.reason }
+          : {}),
+      },
       eligibility: {
         status: sim.eligibility.status,
         summary: sim.eligibility.summary,
