@@ -12,7 +12,7 @@
 > Convenções de estado:
 > `ABERTA` (pendente) · `EM USO COMO PREMISSA` · `MITIGADA` · `RESOLVIDA`.
 
-Última atualização: 2026-09-20 — ETAPA FINAL 4 (Readiness da demo).
+Última atualização: 2026-09-20 — ETAPA FINAL 5 (Freeze do protótipo).
 
 ---
 
@@ -271,6 +271,45 @@ Sem novas lacunas. As ausências (custo/distância/prazo/disponibilidade/anuênc
 seguem L01–L25; o produto as mostra como desconhecidas/premissas, sem invenção.
 Único passo pendente para a demo completa é o **login OAuth interativo** do
 agente da empresa (operador humano), já previsto em `FONTES.md §34`.
+
+---
+
+## 0.6. ETAPA FINAL 5 — Freeze do protótipo (2026-09-20)
+
+Referência: `PLANEJAMENTO-FINALIZACAO.md §23–§25`. As Etapas Finais 1–5 estão
+concluídas e mergeadas na `main`. **Desenvolvimento de features encerrado.**
+
+Política de freeze (só serão feitas correções, nunca features):
+
+```text
+permitido corrigir:  bug que quebra a demo · bug visual grave · erro de build ·
+                     erro de autenticação · erro de MCP · erro factual crítico
+proibido adicionar:  nova tela · nova API · novo módulo · novo dashboard ·
+                     nova integração
+```
+
+Baseline congelada verde (2026-09-20, commit de `main` `bff1f4f`):
+`npm run test` (210), `npx tsc --noEmit`, `npm run lint`, `npm run build`,
+`git diff --check` — e o CI (`.github/workflows/ci.yml`) executa os mesmos
+passos em cada push/PR.
+
+Checklist definitivo (`PLANEJAMENTO-FINALIZACAO §24`) — estado no freeze:
+
+- **Diagnóstico:** formulário, API, simulação, resultado, rotas, DTA,
+  disponibilidade, distância, prazo, custos conhecidos/desconhecidos, dados
+  faltantes, evidências e janela de 48h sem falsa certeza — **OK** (verificado ao
+  vivo na Etapa 4, seção 0.5).
+- **Assistente:** ChatPanel, `conversationId`, contexto da simulação, `chat_free`
+  sem login, OAuth do agente da empresa, seleção do `Agente PortoHackSantos26-GP07`,
+  `chat_with_agent`, fallback público, origem/ressalva na resposta e guardrail
+  (texto externo não altera o motor) — **OK**, com a ressalva única abaixo.
+- **Demo:** cenário principal (`DEMO.md`), perguntas testadas, MCP real testado,
+  fallback testado, CI/build verdes, documentação coerente — **OK**.
+
+Ressalva pendente (não bloqueia o freeze; é passo humano): o **login/consentimento
+OAuth interativo** e a troca final `code → token` do agente da empresa dependem de
+um operador autenticar na Logcomex — discovery/DCR/PKCE já validados contra o
+servidor real (`FONTES.md §34`). Fora isso, o protótipo está fechado.
 
 ---
 
@@ -558,3 +597,6 @@ Decisões que valem confirmação do usuário ou que representam trade-offs.
   roteiro e testes de falha), README atualizado (OAuth do agente da empresa) e
   verificação ponta a ponta ao vivo (simulação, assistente e teste de falha).
   Ver seção "0.5".
+- **2026-09-20 — ETAPA FINAL 5 (Freeze do protótipo):** desenvolvimento de
+  features encerrado; política de freeze e checklist definitivo registrados;
+  baseline `main` verde. Ver seção "0.6".

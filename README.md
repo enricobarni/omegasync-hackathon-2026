@@ -3,6 +3,11 @@
 Motor de elegibilidade e comparação de rotas aduaneiro-operacionais, construído
 durante o Porto Hack Santos 2026.
 
+> **Status: protótipo congelado (2026-09-20).** As Etapas Finais 1–5 estão
+> concluídas. Não há novas features em desenvolvimento — apenas correções
+> críticas (bug que quebre a demo, erro de build/autenticação/MCP ou erro factual
+> crítico). Ver `PLANEJAMENTO-FINALIZACAO.md §23` e `LACUNAS-REVIEW.md §0.6`.
+
 Dada uma carga, o OmegaSync responde:
 
 ```text
